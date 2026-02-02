@@ -144,9 +144,9 @@ public:
 
   [[nodiscard]] operator Vector3<T>() const UBK_NOEXCEPT {
     return Vector3<T>({
-      .x = r * std::sin(phi) * std::cos(theta),
-      .y = r * std::sin(phi) * std::sin(theta),
-      .z = r * std::sin(phi)  
+      .x = r * std::sin(theta) * std::cos(phi),
+      .y = r * std::sin(theta) * std::sin(phi),
+      .z = r * std::cos(theta)  
     });
   }
 };
