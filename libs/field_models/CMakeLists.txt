@@ -3,5 +3,6 @@ target_sources(UBKLib
     FILE_SET public_cxx_modules TYPE CXX_MODULES
     FILES traits.cppm
       electric_potentials/cross_tail.cppm
+      magnetic_fields/dipole.cppm
       field_models.cppm
 )
