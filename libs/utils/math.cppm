@@ -1,5 +1,4 @@
 module;
-
 #include <concepts>
 #include <cmath>
 
@@ -10,6 +9,15 @@ export module ubk.utils:math;
 import :check;
 
 export namespace ubk {
+
+template<std::floating_point T>
+using Re = T;
+
+template<std::floating_point T>
+using kV = T;
+
+template<std::floating_point T>
+using microTesla = T;
 
 template<std::floating_point T>
 struct Vector3 {
@@ -117,11 +125,11 @@ struct Vector3 {
   }
 };
 
-template<std::floating_point T>
+template<std::floating_point T, typename dist_t = Re<T>>
 class SphericalPolar {
 public:
   T theta;
-  T r;
+  dist_t r;
   T phi;
 
   [[nodiscard]] constexpr T

@@ -5,6 +5,7 @@ module;
 
 export module ubk.field_models:electric_potentials.cross_tail;
 
+import :traits;
 import ubk.utils;
 
 namespace ubk {
@@ -13,24 +14,27 @@ template<std::floating_point T>
 class CrossTailPotential {
 public:
 
-static constexpr T ROTATION_VOLTAGE_kV = 92.0; 
-static constexpr T TAIL_POTENTIAL_kV   = 50.0; 
-static constexpr T TAIL_WIDTH_Re       = 30.0; 
+static constexpr kV<T> ROTATION_VOLTAGE = 92.0; 
+static constexpr kV<T> TAIL_POTENTIAL   = 50.0; 
+static constexpr Re<T> TAIL_WIDTH       = 30.0; 
 
-  [[nodiscard]] T 
+  [[nodiscard]] kV<T>
   getField(Vector3<T> pos) const {
       
       
       T r = std::sqrt(pos.x * pos.x + pos.y * pos.y);
 
-      T v_rot = -ROTATION_VOLTAGE_kV / r;
+      T v_rot = -ROTATION_VOLTAGE / r;
 
-      T E_field = TAIL_POTENTIAL_kV / TAIL_WIDTH_Re; 
+      T E_field = TAIL_POTENTIAL / TAIL_WIDTH; 
       T v_conv  = -E_field * pos.y;
 
       return v_rot + v_conv;
   }
 
 };
+
+static_assert(ElectricPotentialModel<CrossTailPotential<double>, double>);
+static_assert(ElectricPotentialModel<CrossTailPotential<float>, float>);
 
 }
