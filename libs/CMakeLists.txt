@@ -4,3 +4,4 @@ target_include_directories(UBKLib
 )
 
 add_subdirectory(utils)
+add_subdirectory(field_models)

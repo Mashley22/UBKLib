@@ -117,4 +117,30 @@ struct Vector3 {
   }
 };
 
+template<std::floating_point T>
+class SphericalPolar {
+public:
+  T theta;
+  T r;
+  T phi;
+
+  [[nodiscard]] constexpr T
+  ampSquared(void) const UBK_NOEXCEPT {
+    return r * r;
+  }
+
+  [[nodiscard]] constexpr T
+  amp(void) const UBK_NOEXCEPT {
+    return r;
+  };
+
+  [[nodiscard]] operator Vector3<T>() const UBK_NOEXCEPT {
+    return Vector3<T>({
+      .x = r * std::sin(phi) * std::cos(theta),
+      .y = r * std::sin(phi) * std::sin(theta),
+      .z = r * std::sin(phi)  
+    });
+  }
+};
+
 };
