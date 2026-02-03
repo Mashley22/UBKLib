@@ -2,9 +2,9 @@ module;
 
 #include <concepts>
 
-export module ubk.field_models:traits;
+export module UBKLib.field_models:traits;
 
-import ubk.utils;
+import UBKLib.utils;
 
 export namespace ubk {
 

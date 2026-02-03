@@ -3,10 +3,10 @@ module;
 #include <concepts>
 #include <cmath>
 
-export module ubk.field_models:electric_potentials.cross_tail;
+export module UBKLib.field_models:electric_potentials.cross_tail;
 
 import :traits;
-import ubk.utils;
+import UBKLib.utils;
 
 namespace ubk {
 

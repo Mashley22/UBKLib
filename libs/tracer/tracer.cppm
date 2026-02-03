@@ -8,10 +8,10 @@ module;
 
 #include <UBK/macros.hpp>
 
-export module ubk.tracer;
+export module UBKLib.tracer;
 
-import ubk.utils;
-import ubk.field_models;
+import UBKLib.utils;
+import UBKLib.field_models;
 
 export namespace ubk {
 

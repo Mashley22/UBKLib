@@ -4,7 +4,7 @@ module;
 #include <string>
 #include <exception>
 
-export module ubk.utils:check;
+export module UBKLib.utils:check;
 
 export namespace ubk {
 

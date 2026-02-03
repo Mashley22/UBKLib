@@ -2,10 +2,10 @@ module;
 
 #include <concepts>
 
-export module ubk.field_models:magnetic_fields.dipole;
+export module UBKLib.field_models:magnetic_fields.dipole;
 
 import :traits;
-import ubk.utils;
+import UBKLib.utils;
 
 namespace ubk {
 

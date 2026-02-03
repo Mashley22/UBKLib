@@ -4,7 +4,7 @@ module;
 
 #include <UBK/macros.hpp>
 
-export module ubk.utils:math;
+export module UBKLib.utils:math;
 
 import :check;
 
