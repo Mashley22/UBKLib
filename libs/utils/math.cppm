@@ -23,8 +23,8 @@ template<std::floating_point T>
 struct Vector3 {
   T x{0}, y{0}, z{0};
   
-  [[nodiscard]] constexpr 
-  Vector3 operator+(const Vector3& other) const UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3 
+  operator+(const Vector3& other) const UBK_NOEXCEPT {
     return {
       .x = x + other.x,
       .y = y + other.y,
@@ -32,8 +32,8 @@ struct Vector3 {
     };
   }
 
-  [[nodiscard]] constexpr 
-  Vector3 operator-(const Vector3& other) const UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3
+  operator-(const Vector3& other) const UBK_NOEXCEPT {
     return {
       .x = x - other.x,
       .y = y - other.y,
@@ -41,8 +41,8 @@ struct Vector3 {
     };
   }
 
-  [[nodiscard]] constexpr
-  Vector3 operator*(const T scalar) const UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3 
+  operator*(const T scalar) const UBK_NOEXCEPT {
     return {
       .x = scalar * x,
       .y = scalar * y,
@@ -50,8 +50,13 @@ struct Vector3 {
     };
   }
 
-  [[nodiscard]] constexpr
-  Vector3 operator/(const T scalar) const UBK_NOEXCEPT {
+  [[nodiscard]] friend constexpr Vector3
+  operator*(const T scalar, Vector3<T> vec) {
+    return vec * scalar;
+  }
+
+  [[nodiscard]] constexpr Vector3 
+  operator/(const T scalar) const UBK_NOEXCEPT {
     return {
       .x = x / scalar,
       .y = y / scalar,
@@ -64,35 +69,35 @@ struct Vector3 {
     return x * other.x + y * other.y + z * other.z;
   }
 
-  [[nodiscard]] constexpr
-  Vector3& operator+= (const Vector3& other) UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3&
+  operator+= (const Vector3& other) UBK_NOEXCEPT {
     x += other.x;
     y += other.y;
     z += other.z;
     return *this;
   }
 
-  [[nodiscard]] constexpr
-  Vector3& operator-= (const Vector3& other) UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3&
+  operator-= (const Vector3& other) UBK_NOEXCEPT {
     x -= other.x;
     y -= other.y;
     z -= other.z;
     return *this;
   }
 
-  [[nodiscard]] constexpr
-  Vector3& operator*= (T scalar) UBK_NOEXCEPT {
+  [[nodiscard]] constexpr Vector3&
+  operator*= (T scalar) UBK_NOEXCEPT {
     x *= scalar;
     y *= scalar;
     z *= scalar;
     return *this;
   }
 
-  [[nodiscard]] constexpr
-  Vector3& operator/= (const Vector3& other) UBK_NOEXCEPT {
-    x /= other.x;
-    y /= other.y;
-    z /= other.z;
+  [[nodiscard]] constexpr Vector3&
+  operator/= (T scalar) UBK_NOEXCEPT {
+    x /= scalar;
+    y /= scalar;
+    z /= scalar;
     return *this;
   }
 
