@@ -23,3 +23,10 @@ target_sources(test_utils
   PRIVATE
     test_utils.cpp
 )
+
+add_unit_test(test_tracer)
+
+target_sources(test_tracer
+  PRIVATE
+    test_tracer.cpp
+)

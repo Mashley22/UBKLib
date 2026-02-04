@@ -6,8 +6,6 @@ module;
 #include <span>
 #include <cmath>
 
-#include <iostream>
-
 #include <UBK/macros.hpp>
 
 export module UBKLib.tracer;
@@ -31,8 +29,8 @@ using MirrorPoints = PointsPair<T>;
 
 template<std::floating_point T>
 struct FieldLineParams {
-  T innerLim_squared = 1.1 * 1.1;
-  T outLim_squared = 15 * 15;
+  T innerLim = 1.05;
+  T outterLim = 15;
   T maxStepDotField = 0.01;
   T failRatio = 1.5;
   std::size_t maxTries = 100;
@@ -100,13 +98,14 @@ public:
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
     clearAll_();
-    fillForward_(startPoint);
-    fillBack_(startPoint);
+    fill_<FillDirection::FORWARD>(startPoint);
+    fill_<FillDirection::BACKWARD>(startPoint);
     
     FieldLine<T, FieldModel, Params> fieldLine;
 
-    fieldLine.m_mirrorPointMagneticIntensity = m_fieldModel.getField(m_back.back()).amp();
-    for (auto it = m_back.rbegin(); it != m_back.rend(); it++) {
+    fieldLine.m_mirrorPointMagneticIntensity = m_fieldModel.getField(m_backward.back()).amp();
+
+    for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
     fieldLine.m_points.push_back(startPoint);
@@ -125,21 +124,33 @@ public:
 
 private:
   std::vector<Vector3<Re<T>>> m_forward;
-  std::vector<Vector3<Re<T>>> m_back;
+  std::vector<Vector3<Re<T>>> m_backward;
   FieldModel m_fieldModel;
+
+  enum class FillDirection {
+    FORWARD,
+    BACKWARD
+  };
   
   [[nodiscard]] bool
   validStep_(Vector3<Re<T>> loc, Vector3<Re<T>> step, Vector3<microTesla<T>> field) {
     T distSquared = loc.ampSquared();
     return (step.dot(field) < Params.maxStepDotField) &&
-           (Params.innerLim_squared < distSquared) &&
-           (Params.outLim_squared > distSquared);
+           (Params.innerLim * Params.innerLim < distSquared) &&
+           (Params.outterLim * Params.outterLim > distSquared);
   }
   
+  template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
-  takeStepForward_(Vector3<Re<T>> loc) {
+  takeStep_(Vector3<Re<T>> loc) {
     Vector3<microTesla<T>> field = m_fieldModel.getField(loc);
-    Vector3<Re<T>> step = field;
+    Vector3<Re<T>> step = field.normalised();
+    
+    if constexpr (direc == FillDirection::BACKWARD) {
+      field = -1 * field;
+      step = -1 * step;
+    }
+
     for (std::size_t i = 0; i < Params.maxTries; i++) {
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc, step, field)) {
@@ -149,62 +160,46 @@ private:
     }
     return std::nullopt;
   }
-
-  [[nodiscard]] std::optional<Vector3<Re<T>>>
-  takeStepBackward_(Vector3<Re<T>> loc) {
-    Vector3<microTesla<T>> field = m_fieldModel.getField(loc) * -1.0;
-    Vector3<Re<T>> step = field;
-    for (std::size_t i = 0; i < Params.maxTries; i++) {
-      Vector3<Re<T>> newLoc = step + loc;
-      if (validStep_(newLoc, step, field)) {
-        return newLoc;
-      }
-      step = step / Params.failRatio;
+    
+  template<FillDirection direc>
+  [[nodiscard]]
+  std::vector<Vector3<Re<T>>>& buf_(void) UBK_NOEXCEPT {
+    if constexpr (direc == FillDirection::FORWARD) {
+      return m_forward;
     }
-    return std::nullopt;
+    else if (direc == FillDirection::BACKWARD) {
+      return m_backward;
+    }
+    else {
+      throw;
+    }
   }
-
+  
+  template<FillDirection direc>
   void 
-  fillForward_(Vector3<Re<T>> starting) {
-    std::optional<Vector3<Re<T>>> nextLoc = takeStepForward_(starting);
+  fill_(Vector3<Re<T>> starting) {
+
+    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(starting);
 
     if (!nextLoc.has_value()) {
       return;
       // throw;
     }
     
-    m_forward.push_back(nextLoc.value());
+    buf_<direc>().push_back(nextLoc.value());
     while(true) {
-      nextLoc = takeStepForward_(nextLoc.value());
+      nextLoc = takeStep_<direc>(nextLoc.value());
       if (!nextLoc.has_value()) {
         return;
       }
-      m_forward.push_back(nextLoc.value());
-    }
-  }
-
-  void 
-  fillBack_(Vector3<Re<T>> starting) {
-    std::optional<Vector3<Re<T>>> nextLoc = takeStepBackward_(starting);
-
-    if (!nextLoc.has_value()) {
-      throw;
-    }
-    
-    m_back.push_back(nextLoc.value());
-    while(true) {
-      nextLoc = takeStepBackward_(nextLoc.value());
-      if (!nextLoc.has_value()) {
-        return;
-      }
-      m_back.push_back(nextLoc.value());
+      buf_<direc>().push_back(nextLoc.value());
     }
   }
 
   void
   clearAll_(void) {
     m_forward.resize(0);
-    m_back.resize(0);
+    m_backward.resize(0);
   }
 };
 
