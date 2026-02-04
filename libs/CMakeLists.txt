@@ -3,6 +3,13 @@ target_include_directories(UBKLib
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
+if(UBKLIB_UNIT_TEST)
+  target_compile_options(UBKLib
+    PRIVATE
+      ${PEDANTIC_COMPILE_OPTIONS}
+  )
+endif()
+
 add_subdirectory(utils)
 add_subdirectory(field_models)
 add_subdirectory(tracer)

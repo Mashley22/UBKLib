@@ -6,6 +6,8 @@ module;
 #include <span>
 #include <cmath>
 
+#include <iostream>
+
 #include <UBK/macros.hpp>
 
 export module UBKLib.tracer;
@@ -29,8 +31,8 @@ using MirrorPoints = PointsPair<T>;
 
 template<std::floating_point T>
 struct FieldLineParams {
-  Vector3<Re<T>> innerLim_squared = 1.1 * 1.1;
-  Vector3<Re<T>> outLim_squared = 15 * 15;
+  T innerLim_squared = 1.1 * 1.1;
+  T outLim_squared = 15 * 15;
   T maxStepDotField = 0.01;
   T failRatio = 1.5;
   std::size_t maxTries = 100;
@@ -53,6 +55,7 @@ class FieldLineGenerator;
 template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLine {
+public:
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
 
@@ -102,7 +105,7 @@ public:
     
     FieldLine<T, FieldModel, Params> fieldLine;
 
-    fieldLine.m_mirrorPointMagneticIntensity = m_back.back();
+    fieldLine.m_mirrorPointMagneticIntensity = m_fieldModel.getField(m_back.back()).amp();
     for (auto it = m_back.rbegin(); it != m_back.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
@@ -142,34 +145,37 @@ private:
       if (validStep_(newLoc, step, field)) {
         return newLoc;
       }
+      step = step / Params.failRatio;
     }
     return std::nullopt;
   }
 
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStepBackward_(Vector3<Re<T>> loc) {
-    Vector3<microTesla<T>> field = m_fieldModel.getField(loc);
-    Vector3<Re<T>> step = -1 * field;
+    Vector3<microTesla<T>> field = m_fieldModel.getField(loc) * -1.0;
+    Vector3<Re<T>> step = field;
     for (std::size_t i = 0; i < Params.maxTries; i++) {
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc, step, field)) {
         return newLoc;
       }
+      step = step / Params.failRatio;
     }
     return std::nullopt;
   }
 
   void 
-  fillFront_(Vector3<Re<T>> starting) {
+  fillForward_(Vector3<Re<T>> starting) {
     std::optional<Vector3<Re<T>>> nextLoc = takeStepForward_(starting);
 
     if (!nextLoc.has_value()) {
-      throw;
+      return;
+      // throw;
     }
     
-    m_forward.push_back(nextLoc);
+    m_forward.push_back(nextLoc.value());
     while(true) {
-      nextLoc = takeStepForward_(nextLoc);
+      nextLoc = takeStepForward_(nextLoc.value());
       if (!nextLoc.has_value()) {
         return;
       }
@@ -179,15 +185,15 @@ private:
 
   void 
   fillBack_(Vector3<Re<T>> starting) {
-    std::optional<Vector3<Re<T>>> nextLoc = takeStepBack_(starting);
+    std::optional<Vector3<Re<T>>> nextLoc = takeStepBackward_(starting);
 
     if (!nextLoc.has_value()) {
       throw;
     }
     
-    m_back.push_back(nextLoc);
+    m_back.push_back(nextLoc.value());
     while(true) {
-      nextLoc = takeStepBackward_(nextLoc);
+      nextLoc = takeStepBackward_(nextLoc.value());
       if (!nextLoc.has_value()) {
         return;
       }

@@ -8,7 +8,7 @@ export module UBKLib.field_models:electric_potentials.cross_tail;
 import :traits;
 import UBKLib.utils;
 
-namespace ubk {
+export namespace ubk {
 
 template<std::floating_point T>
 class CrossTailPotential {

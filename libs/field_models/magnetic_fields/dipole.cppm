@@ -7,7 +7,7 @@ export module UBKLib.field_models:magnetic_fields.dipole;
 import :traits;
 import UBKLib.utils;
 
-namespace ubk {
+export namespace ubk {
 
 template<std::floating_point T>
 class Dipole {

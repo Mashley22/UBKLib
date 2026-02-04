@@ -21,12 +21,8 @@ using microTesla = T;
 
 template<std::floating_point T>
 struct Vector3 {
-  T x, y, z;
+  T x{0}, y{0}, z{0};
   
-  constexpr
-  Vector3(double x = 0, double y = 0, double z = 0) UBK_NOEXCEPT
-    : x(x), y(y), z(z) {}
-
   [[nodiscard]] constexpr 
   Vector3 operator+(const Vector3& other) const UBK_NOEXCEPT {
     return {
@@ -57,9 +53,9 @@ struct Vector3 {
   [[nodiscard]] constexpr
   Vector3 operator/(const T scalar) const UBK_NOEXCEPT {
     return {
-      .x = scalar / x,
-      .y = scalar / y,
-      .z = scalar / z,
+      .x = x / scalar,
+      .y = y / scalar,
+      .z = z / scalar,
     };
   }
 
@@ -85,10 +81,10 @@ struct Vector3 {
   }
 
   [[nodiscard]] constexpr
-  Vector3& operator*= (const Vector3& other) UBK_NOEXCEPT {
-    x *= other.x;
-    y *= other.y;
-    z *= other.z;
+  Vector3& operator*= (T scalar) UBK_NOEXCEPT {
+    x *= scalar;
+    y *= scalar;
+    z *= scalar;
     return *this;
   }
 
@@ -123,6 +119,8 @@ struct Vector3 {
   normalised(void) const UBK_NOEXCEPT {
     return Vector3(*this/amp());
   }
+
+  bool operator==(const Vector3&) const UBK_NOEXCEPT = default;
 };
 
 template<std::floating_point T, typename dist_t = Re<T>>

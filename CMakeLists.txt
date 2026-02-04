@@ -16,6 +16,28 @@ if(UBKLIB_UNIT_TEST)
   add_compile_definitions(UBKLIB_UNIT_TEST UBKLIB_CHECK_FAIL_THROWS)
 endif()
 
+set(PEDANTIC_COMPILE_OPTIONS
+  -Wall 
+  -Wextra 
+  -Wpedantic 
+  -Werror 
+  -Wshadow 
+  -Wconversion 
+  -Wsign-conversion 
+  -Wcast-align 
+  -Wcast-qual 
+  -Wformat=2 
+  -Wundef 
+  -Wnull-dereference 
+  -Wdouble-promotion 
+  -Wimplicit-fallthrough 
+  -Wmissing-declarations 
+  -Wredundant-decls 
+  -Wstrict-overflow=5 
+  -Wswitch-enum 
+  -Wunreachable-code
+)
+
 add_library(UBKLib)
 
 add_subdirectory(libs)
@@ -24,8 +46,10 @@ if(UBKLIB_UNIT_TEST)
   enable_testing()
   include(CTest)
 
-  #  add_subdirectory(extern/catch2)
-  #list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/extern/catch2/extras")
-  #include(Catch)
+  add_subdirectory(extern/catch2)
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/extern/catch2/extras")
+  include(Catch)
+
+  add_subdirectory(validation)
 
 endif()
