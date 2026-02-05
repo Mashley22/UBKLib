@@ -19,6 +19,8 @@ check(bool expr,
       std::source_location loc = std::source_location::current()) {
   if (!expr) {
     #ifndef UBKLIB_UNIT_TEST
+    (void)msg;
+    (void)loc;
     std::terminate();
     #else 
     throw CheckFail{.msg = msg, .loc = loc};

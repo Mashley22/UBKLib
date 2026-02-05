@@ -33,7 +33,7 @@ struct FieldLineParams {
   T innerLim = 1.05;
   T outterLim = 15;
   T maxStepDotField = 0.01;
-  T failRatio = 1.5;
+  T failRatio = 2;
   T maxStepSize = 0.01;
   std::size_t maxStepCount = 10000;
 
@@ -155,7 +155,7 @@ private:
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStep_(Vector3<Re<T>> loc) {
     Vector3<microTesla<T>> field = m_fieldModel.getField(loc);
-    Vector3<Re<T>> step = field.normalised();
+    Vector3<Re<T>> step = field / field.ampSquared();
     
     if constexpr (direc == FillDirection::BACKWARD) {
       field = -1 * field;

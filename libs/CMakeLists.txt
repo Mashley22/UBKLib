@@ -3,7 +3,7 @@ target_include_directories(UBKLib
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-if(UBKLIB_UNIT_TEST)
+if(UBKLIB_UNIT_TEST OR UBKLIB_SAMPLES)
   target_compile_options(UBKLib
     PRIVATE
       ${PEDANTIC_COMPILE_OPTIONS}

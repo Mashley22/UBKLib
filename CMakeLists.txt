@@ -16,6 +16,11 @@ if(UBKLIB_UNIT_TEST)
   add_compile_definitions(UBKLIB_UNIT_TEST UBKLIB_CHECK_FAIL_THROWS)
 endif()
 
+if(UBKLIB_SAMPLES)
+  add_compile_options(-O3 -march=native)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 set(PEDANTIC_COMPILE_OPTIONS
   -Wall 
   -Wextra 
@@ -52,4 +57,8 @@ if(UBKLIB_UNIT_TEST)
 
   add_subdirectory(validation)
 
+endif()
+
+if(UBKLIB_SAMPLES)
+  add_subdirectory(samples)
 endif()
