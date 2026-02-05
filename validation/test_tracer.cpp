@@ -10,7 +10,7 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
     .outterLim = 15,
     .maxStepDotField = 0.01,
     .failRatio = 1.5,
-    .maxTries = 50,
+    .maxStepCount = 1000,
   };
   
   FieldLineGenerator<double, Dipole<double>, params> generator;

@@ -5,6 +5,7 @@ module;
 #include <vector>
 #include <span>
 #include <cmath>
+#include <stdexcept>
 
 #include <UBK/macros.hpp>
 
@@ -33,7 +34,17 @@ struct FieldLineParams {
   T outterLim = 15;
   T maxStepDotField = 0.01;
   T failRatio = 1.5;
-  std::size_t maxTries = 100;
+  T maxStepSize = 0.01;
+  std::size_t maxStepCount = 10000;
+
+  constexpr T minStepSize(void) const UBK_NOEXCEPT {
+    if constexpr (std::is_same_v<T, double>) {
+      return outterLim * 1e-15;
+    }
+    if constexpr (std::is_same_v<T, double>) {
+      return outterLim * 1e-7;
+    }
+  }
 };
 
 // here to make field model stuff simpler
@@ -151,14 +162,16 @@ private:
       step = -1 * step;
     }
 
-    for (std::size_t i = 0; i < Params.maxTries; i++) {
+    while(true) {
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc, step, field)) {
         return newLoc;
       }
+      else if (step.ampSquared() < (Params.minStepSize() * Params.minStepSize())) {
+        return std::nullopt;
+      }
       step = step / Params.failRatio;
     }
-    return std::nullopt;
   }
     
   template<FillDirection direc>
@@ -182,12 +195,11 @@ private:
     std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(starting);
 
     if (!nextLoc.has_value()) {
-      return;
-      // throw;
+      std::runtime_error("Couldn't even take one step!");
     }
     
     buf_<direc>().push_back(nextLoc.value());
-    while(true) {
+    for (std::size_t i = 0; i < Params.maxStepCount; i++) {
       nextLoc = takeStep_<direc>(nextLoc.value());
       if (!nextLoc.has_value()) {
         return;
