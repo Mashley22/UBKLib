@@ -73,7 +73,7 @@ public:
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
 
-  [[nodiscard]] std::span<const Point>
+  [[nodiscard]] constexpr std::span<const Point>
   points(void) const UBK_NOEXCEPT {
     return m_points;
   }
@@ -95,6 +95,14 @@ public:
     fill_<FillDirection::BACKWARD>(startPoint);
     
     FieldLine<T, FieldModel, Params> fieldLine;
+
+    if (m_backward.back().magneticIntensity < m_forward.back().magneticIntensity) {
+      trimForward_();
+    }
+    else {
+      trimBackward_();
+    }
+
 
     for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
@@ -204,6 +212,48 @@ private:
   clearAll_(void) {
     m_forward.resize(0);
     m_backward.resize(0);
+  }
+
+  void
+  trimForward_(void) {
+    microTesla<T> targetIntensity = m_backward.back().magneticIntensity;
+    FieldLinePoint prevPoint = m_forward.back();
+    m_forward.pop_back();
+
+    while(targetIntensity < m_forward.back().magneticIntensity) {
+      prevPoint = m_forward.back();
+      m_forward.pop_back();
+    }
+
+    FieldLinePoint res = {
+      .loc = (targetIntensity - m_forward.back().magneticIntensity) /
+        (prevPoint.magneticIntensity - m_forward.back().magneticIntensity) *
+        (m_forward.back().loc - prevPoint.loc) +
+        m_forward.back().loc,
+      .magneticIntensity = targetIntensity
+    };
+    m_forward.push_back(res);
+  }
+
+  void
+  trimBackward_(void) {
+    microTesla<T> targetIntensity = m_forward.back().magneticIntensity;
+    FieldLinePoint prevPoint = m_backward.back();
+    m_backward.pop_back();
+
+    while(targetIntensity < m_backward.back().magneticIntensity) {
+      prevPoint = m_backward.back();
+      m_backward.pop_back();
+    }
+
+    FieldLinePoint res = {
+      .loc = (targetIntensity - m_backward.back().magneticIntensity) /
+        (prevPoint.magneticIntensity - m_backward.back().magneticIntensity) *
+        (m_backward.back().loc - prevPoint.loc) +
+        m_backward.back().loc,
+      .magneticIntensity = targetIntensity
+    };
+    m_backward.push_back(res);
   }
 };
 
