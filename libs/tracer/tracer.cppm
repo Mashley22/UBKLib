@@ -66,27 +66,29 @@ requires MagneticFieldModel<FieldModel, T>
 class FieldLine {
 public:
 
-  struct Point {
-    Vector3<Re<T>> loc;
-    microTesla<T> magneticIntensity;
+  struct FullPointInfo {
+    Vector3<Re<T>> loc{};
+    Vector3<microTesla<T>> magneticField{};
+    T magneticIntensity{};
+    T longitudinalInvariant{};
   };
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
 
-  [[nodiscard]] constexpr std::span<const Point>
+  [[nodiscard]] constexpr std::span<const FullPointInfo>
   points(void) const UBK_NOEXCEPT {
     return m_points;
   }
   
 private:
-  std::vector<Point> m_points;
+  std::vector<FullPointInfo> m_points;
 };
 
 template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLineGenerator {
 public:
-  using FieldLinePoint = FieldLine<T, FieldModel, Params>::Point;
+  using FieldLinePoint = FieldLine<T, FieldModel, Params>::FullPointInfo;
 
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
@@ -107,7 +109,16 @@ public:
     for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
-    fieldLine.m_points.push_back({.loc = startPoint, .magneticIntensity = m_fieldModel.getField(startPoint).amp()});
+
+    {
+      FieldLinePoint point = {
+        .loc = startPoint,
+        .magneticField = m_fieldModel.getField(startPoint)
+      };
+      point.magneticIntensity = point.magneticField.amp();
+
+      fieldLine.m_points.push_back(point);
+    }
 
     for (auto it = m_forward.begin(); it != m_forward.end(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
@@ -179,31 +190,32 @@ private:
   void 
   fill_(Vector3<Re<T>> starting) {
     
-    Vector3<microTesla<T>> field = m_fieldModel.getField(starting);
     FieldLinePoint point = {
       .loc = starting,
-      .magneticIntensity = field.amp()
+      .magneticField = m_fieldModel.getField(point.loc),
     };
-    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
+    point.magneticIntensity = point.magneticField.amp();
+
+    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
 
     if (!nextLoc.has_value()) {
       std::runtime_error("Couldn't even take one step!");
     }
     
     point.loc = nextLoc.value();
-    field = m_fieldModel.getField(point.loc);
-    point.magneticIntensity = field.amp();
+    point.magneticField = m_fieldModel.getField(point.loc);
+    point.magneticIntensity = point.magneticField.amp();
     buf_<direc>().push_back(point);
 
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
-      nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
+      nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
       if (!nextLoc.has_value()) {
         return;
       }
 
       point.loc = nextLoc.value();
-      field = m_fieldModel.getField(point.loc);
-      point.magneticIntensity = field.amp();
+      point.magneticField = m_fieldModel.getField(point.loc);
+      point.magneticIntensity = point.magneticField.amp();
       buf_<direc>().push_back(point);
     }
   }
