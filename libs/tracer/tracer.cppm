@@ -66,46 +66,28 @@ requires MagneticFieldModel<FieldModel, T>
 class FieldLine {
 public:
 
+  struct Point {
+    Vector3<Re<T>> loc;
+    microTesla<T> magneticIntensity;
+  };
+
   friend class FieldLineGenerator<T, FieldModel, Params>;
 
-  [[nodiscard]] std::span<const Vector3<Re<T>>>
+  [[nodiscard]] std::span<const Point>
   points(void) const UBK_NOEXCEPT {
     return m_points;
   }
   
-  [[nodiscard]] MirrorPoints<T>
-  mirrorPoints(void) const UBK_NOEXCEPT {
-    return {.begin = m_points.front(), .end = m_points.back()};
-  }
-  
-  [[nodiscard]] T
-  maxModifiedLongitudinalInvariant(const FieldModel& field) {
-    T retVal = 0;
-
-    for (std::size_t i = 0; i < m_points.size() - 1; i++) {
-      retVal += integrationStep({.begin = m_points[i], .end = m_points[i + 1]},
-                                field);
-    }
-
-    return retVal;
-  }
-
 private:
-  microTesla<T> m_mirrorPointMagneticIntensity;
-  std::vector<Vector3<Re<T>>> m_points;
-
-  [[nodiscard]] T
-  integrationStep_(PointsPair<T> points, const FieldModel& field) {
-    microTesla<T> localMagneticIntensity = field.getField(points.begin).amp();
-    T distSquared = points.diff().ampSquared();
-    return std::sqrt((localMagneticIntensity - m_mirrorPointMagneticIntensity) * distSquared);
-  }
+  std::vector<Point> m_points;
 };
 
 template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLineGenerator {
 public:
+  using FieldLinePoint = FieldLine<T, FieldModel, Params>::Point;
+
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
     clearAll_();
@@ -114,12 +96,10 @@ public:
     
     FieldLine<T, FieldModel, Params> fieldLine;
 
-    fieldLine.m_mirrorPointMagneticIntensity = m_fieldModel.getField(m_backward.back()).amp();
-
     for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
-    fieldLine.m_points.push_back(startPoint);
+    fieldLine.m_points.push_back({.loc = startPoint, .magneticIntensity = m_fieldModel.getField(startPoint).amp()});
 
     for (auto it = m_forward.begin(); it != m_forward.end(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
@@ -134,8 +114,8 @@ public:
   }
 
 private:
-  std::vector<Vector3<Re<T>>> m_forward;
-  std::vector<Vector3<Re<T>>> m_backward;
+  std::vector<FieldLinePoint> m_forward;
+  std::vector<FieldLinePoint> m_backward;
   FieldModel m_fieldModel;
 
   enum class FillDirection {
@@ -144,18 +124,16 @@ private:
   };
   
   [[nodiscard]] bool
-  validStep_(Vector3<Re<T>> loc, Vector3<Re<T>> step, Vector3<microTesla<T>> field) {
+  validStep_(Vector3<Re<T>> loc) {
     T distSquared = loc.ampSquared();
-    return (step.dot(field) < Params.maxStepDotField) &&
-           (Params.innerLim * Params.innerLim < distSquared) &&
+    return (Params.innerLim * Params.innerLim < distSquared) &&
            (Params.outterLim * Params.outterLim > distSquared);
   }
   
   template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
-  takeStep_(Vector3<Re<T>> loc) {
-    Vector3<microTesla<T>> field = m_fieldModel.getField(loc);
-    Vector3<Re<T>> step = field / field.ampSquared();
+  takeStep_(Vector3<Re<T>> loc, Vector3<microTesla<T>> field, microTesla<T> fieldIntensity) {
+    Vector3<Re<T>> step = field / fieldIntensity * std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
     
     if constexpr (direc == FillDirection::BACKWARD) {
       field = -1 * field;
@@ -164,7 +142,7 @@ private:
 
     while(true) {
       Vector3<Re<T>> newLoc = step + loc;
-      if (validStep_(newLoc, step, field)) {
+      if (validStep_(newLoc)) {
         return newLoc;
       }
       else if (step.ampSquared() < (Params.minStepSize() * Params.minStepSize())) {
@@ -176,7 +154,8 @@ private:
     
   template<FillDirection direc>
   [[nodiscard]]
-  std::vector<Vector3<Re<T>>>& buf_(void) UBK_NOEXCEPT {
+  std::vector<FieldLinePoint>&
+  buf_(void) UBK_NOEXCEPT {
     if constexpr (direc == FillDirection::FORWARD) {
       return m_forward;
     }
@@ -191,20 +170,33 @@ private:
   template<FillDirection direc>
   void 
   fill_(Vector3<Re<T>> starting) {
-
-    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(starting);
+    
+    Vector3<microTesla<T>> field = m_fieldModel.getField(starting);
+    FieldLinePoint point = {
+      .loc = starting,
+      .magneticIntensity = field.amp()
+    };
+    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
 
     if (!nextLoc.has_value()) {
       std::runtime_error("Couldn't even take one step!");
     }
     
-    buf_<direc>().push_back(nextLoc.value());
+    point.loc = nextLoc.value();
+    field = m_fieldModel.getField(point.loc);
+    point.magneticIntensity = field.amp();
+    buf_<direc>().push_back(point);
+
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
-      nextLoc = takeStep_<direc>(nextLoc.value());
+      nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
       if (!nextLoc.has_value()) {
         return;
       }
-      buf_<direc>().push_back(nextLoc.value());
+
+      point.loc = nextLoc.value();
+      field = m_fieldModel.getField(point.loc);
+      point.magneticIntensity = field.amp();
+      buf_<direc>().push_back(point);
     }
   }
 
