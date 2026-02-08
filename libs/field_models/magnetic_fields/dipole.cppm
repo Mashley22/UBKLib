@@ -12,7 +12,7 @@ export namespace ubk {
 template<std::floating_point T>
 class Dipole {
 public:
-  static constexpr microTesla<T> B_0 = 31.2;
+  static constexpr microTesla<T> B_0 = static_cast<T>(31.2);
 
   [[nodiscard]] Vector3<microTesla<T>>
   getField(Vector3<T> pos) const {

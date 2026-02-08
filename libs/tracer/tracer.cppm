@@ -41,8 +41,8 @@ struct FieldLineParams {
     if constexpr (std::is_same_v<T, double>) {
       return outterLim * 1e-15;
     }
-    if constexpr (std::is_same_v<T, double>) {
-      return outterLim * 1e-7;
+    if constexpr (std::is_same_v<T, float>) {
+      return outterLim * 1e-7f;
     }
   }
 };
@@ -152,14 +152,13 @@ private:
   template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStep_(Vector3<Re<T>> loc, Vector3<microTesla<T>> field, microTesla<T> fieldIntensity) {
-    Vector3<Re<T>> step = field / fieldIntensity * std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
+    T h = 1 / fieldIntensity * std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
     
-    if constexpr (direc == FillDirection::BACKWARD) {
-      field = -1 * field;
-      step = -1 * step;
-    }
-
     while(true) {
+      Vector3<Re<T>> step = static_cast<T>(0.5) * h * (field + m_fieldModel.getField(loc + h * field));
+      if constexpr (direc == FillDirection::BACKWARD) {
+        step = -1 * step;
+      }
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc)) {
         return newLoc;
@@ -167,7 +166,7 @@ private:
       else if (step.ampSquared() < (Params.minStepSize() * Params.minStepSize())) {
         return std::nullopt;
       }
-      step = step / Params.failRatio;
+      h = h / Params.failRatio;
     }
   }
     
