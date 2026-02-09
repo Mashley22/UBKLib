@@ -6,6 +6,7 @@ module;
 #include <span>
 #include <cmath>
 #include <stdexcept>
+#include <cstdint>
 
 #include <UBK/macros.hpp>
 
@@ -77,6 +78,11 @@ public:
 
   [[nodiscard]] constexpr std::span<const FullPointInfo>
   points(void) const UBK_NOEXCEPT {
+    return m_points;
+  }
+
+  [[nodiscard]] constexpr std::span<FullPointInfo>
+  points(void) UBK_NOEXCEPT {
     return m_points;
   }
   
@@ -267,5 +273,57 @@ private:
     m_backward.push_back(res);
   }
 };
+
+template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
+requires MagneticFieldModel<FieldModel, T>
+void
+calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
+
+  auto longitudinalInvariant = [&](std::size_t startIdx, int direc) {
+    T K = 0;
+    std::size_t idx = startIdx;
+    auto nextIdx = [&](){ return static_cast<std::size_t>(static_cast<std::int64_t>(idx) + direc); };
+
+    while (fieldLine.points()[startIdx].magneticIntensity >
+      fieldLine.points()[nextIdx()].magneticIntensity) {
+
+      K += std::sqrt((fieldLine.points()[startIdx].magneticIntensity -
+                     fieldLine.points()[nextIdx()].magneticIntensity) *
+                     (fieldLine.points()[nextIdx()].loc -
+                     fieldLine.points()[idx].loc).ampSquared());
+
+      idx = nextIdx();
+
+      if (idx == 0 || idx == fieldLine.points().size()) {
+        break;
+      }
+    }
+
+    return K;
+  };
+  
+  fieldLine.points()[0].longitudinalInvariant = longitudinalInvariant(0, 1);
+  fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size(), -1);
+
+  for (std::size_t i = 1; i < fieldLine.points().size() - 1; i++) {
+    bool forward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i + 1].magneticIntensity;
+    bool backward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i - 1].magneticIntensity;
+
+    if (forward && backward) {
+      std::terminate();
+    }
+    else if (!forward && !backward) {
+      fieldLine.points()[i].longitudinalInvariant = 0;
+    }
+    else {
+      if (forward) {
+        fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, 1);
+      }
+      if (backward) {
+        fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, -1);
+      }
+    }
+  }
+}
 
 }
