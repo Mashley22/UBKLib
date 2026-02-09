@@ -45,6 +45,11 @@ set(PEDANTIC_COMPILE_OPTIONS
 
 add_library(UBKLib)
 
+target_include_directories(UBKLib
+  PRIVATE 
+    ${CMAKE_CURRENT_LIST_DIR}/extern/xoshiro/include
+)
+
 add_subdirectory(libs)
 
 if(UBKLIB_UNIT_TEST)
