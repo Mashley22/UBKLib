@@ -1,8 +1,11 @@
 module;
+
 #include <concepts>
 #include <cmath>
 
 #include <UBK/macros.hpp>
+
+#include <xoshiro.h>
 
 export module UBKLib.utils:math;
 
@@ -152,6 +155,63 @@ public:
       .z = r * std::cos(theta)  
     });
   }
+};
+
+template<std::floating_point T, 
+  xso::Distribution Distx,
+  xso::Distribution Disty,
+  xso::Distribution Distz, 
+  class Generator = xso::rng>
+[[nodiscard]] Vector3<T>
+genRndVector3(Distx& distx, Disty& disty, Distz& distz) {
+  thread_local Generator gen;
+  return { .x = static_cast<T>(distx(gen)),
+           .y = static_cast<T>(disty(gen)),
+           .z = static_cast<T>(distz(gen)) };
+}
+
+template<std::floating_point T,
+  xso::Distribution Distx,
+  xso::Distribution Disty,
+  xso::Distribution Distz, 
+  class Generator = xso::rng>
+class RandomVector3Generator {
+public:
+  RandomVector3Generator();
+
+  RandomVector3Generator(const Distx& distx, const Disty& disty, const Distz& distz) UBK_NOEXCEPT
+    : m_distx(distx), m_disty(disty), m_distz(distz) {}
+ 
+  [[nodiscard]] Vector3<T>
+  gen(void) {
+    return { .x = static_cast<T>(m_distx(m_gen)),
+             .y = static_cast<T>(m_disty(m_gen)),
+             .z = static_cast<T>(m_distz(m_gen)) };
+  }
+  
+  [[nodiscard]] const Distx&
+  distx(void) const { return m_distx; }
+
+  [[nodiscard]] const Distx&
+  disty(void) const { return m_disty; }
+
+  [[nodiscard]] const Distx&
+  distz(void) const { return m_distz; }
+
+  [[nodiscard]] Distx&
+  distx(void) { return m_distx; }
+
+  [[nodiscard]] Distx&
+  disty(void) { return m_disty; }
+
+  [[nodiscard]] Distx&
+  distz(void) { return m_distz; }
+
+private:
+  static thread_local inline Generator m_gen{};
+  Distx m_distx;
+  Disty m_disty;
+  Distz m_distz;
 };
 
 };
