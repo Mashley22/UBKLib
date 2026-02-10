@@ -17,6 +17,8 @@ import UBKLib.field_models;
 
 export namespace ubk {
 
+class BifercatingFieldLine {};
+
 template<std::floating_point T>
 struct PointsPair {
   Vector3<Re<T>> begin, end;
@@ -201,27 +203,46 @@ private:
     };
     point.magneticIntensity = point.magneticField.amp();
 
+    microTesla<T> minMagneticIntensity = point.magneticIntensity;
+    bool foundMinima = false;
+
     std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
 
     if (!nextLoc.has_value()) {
       std::runtime_error("Couldn't even take one step!");
     }
-    
-    point.loc = nextLoc.value();
-    point.magneticField = m_fieldModel.getField(point.loc);
-    point.magneticIntensity = point.magneticField.amp();
-    buf_<direc>().push_back(point);
 
+    auto checkNotBifercating = [&](microTesla<T> newIntensity) {
+      if (newIntensity > minMagneticIntensity) {
+        foundMinima = true;
+      }
+      else {
+        if (foundMinima) {
+          throw BifercatingFieldLine{};
+        }
+        minMagneticIntensity = newIntensity;
+      }
+    };
+
+    auto assignPoint = [&]() {
+      point.loc = nextLoc.value();
+      point.magneticField = m_fieldModel.getField(point.loc);
+      point.magneticIntensity = point.magneticField.amp();
+      
+      checkNotBifercating(point.magneticIntensity);
+
+      buf_<direc>().push_back(point);
+    };
+
+    assignPoint();
+    
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
       nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
       if (!nextLoc.has_value()) {
         return;
       }
-
-      point.loc = nextLoc.value();
-      point.magneticField = m_fieldModel.getField(point.loc);
-      point.magneticIntensity = point.magneticField.amp();
-      buf_<direc>().push_back(point);
+      
+      assignPoint();
     }
   }
 
