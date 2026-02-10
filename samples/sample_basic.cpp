@@ -20,7 +20,6 @@ int main() {
   for (int i = 1; i < 100; i++) {
     auto seed = rng.gen();
     ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine(seed);
-    std::cout << fieldLine.points().size() << '\n';
     if (fieldLine.points().size() < 1000 ||
         fieldLine.points()[0].loc.ampSquared() < 1.1 ||
         fieldLine.points().back().loc.ampSquared() < 1.1) {
@@ -28,6 +27,8 @@ int main() {
     }
     calculateLongitudinalInvariants(fieldLine);
     std::cout << seed.x << "  " << seed.y << "    " << seed.z << '\n';
+    std::cout << fieldLine.points().size() << '\n';
+    std::cout << fieldLine.maxLongitudinalInvariant() << '\n';
   }
 
   return 0;

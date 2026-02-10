@@ -87,6 +87,12 @@ public:
   points(void) UBK_NOEXCEPT {
     return m_points;
   }
+
+  [[nodiscard]] constexpr const T
+  maxLongitudinalInvariant(void) const UBK_NOEXCEPT {
+    return std::max(m_points.front().longitudinalInvariant,
+                    m_points.back().longitudinalInvariant);
+  }
   
 private:
   std::vector<FullPointInfo> m_points;
@@ -323,7 +329,7 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
     return K;
   };
   
-  fieldLine.points()[0].longitudinalInvariant = longitudinalInvariant(0, 1);
+  fieldLine.points().front().longitudinalInvariant = longitudinalInvariant(0, 1);
   fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size(), -1);
 
   for (std::size_t i = 1; i < fieldLine.points().size() - 1; i++) {
