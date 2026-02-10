@@ -90,8 +90,7 @@ public:
 
   [[nodiscard]] constexpr const T
   maxLongitudinalInvariant(void) const UBK_NOEXCEPT {
-    return std::max(m_points.front().longitudinalInvariant,
-                    m_points.back().longitudinalInvariant);
+    return m_points.front().longitudinalInvariant; // Note that this should ALWAYS be subsituteable for .back()
   }
   
 private:
@@ -330,7 +329,7 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
   };
   
   fieldLine.points().front().longitudinalInvariant = longitudinalInvariant(0, 1);
-  fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size(), -1);
+  fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size() - 1, -1);
 
   for (std::size_t i = 1; i < fieldLine.points().size() - 1; i++) {
     bool forward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i + 1].magneticIntensity;
