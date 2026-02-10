@@ -181,6 +181,9 @@ public:
 
   RandomVector3Generator(const Distx& distx, const Disty& disty, const Distz& distz) UBK_NOEXCEPT
     : m_distx(distx), m_disty(disty), m_distz(distz) {}
+
+  RandomVector3Generator(const Distx& dist) UBK_NOEXCEPT
+    : m_distx(dist), m_disty(dist), m_distz(dist) {}
  
   [[nodiscard]] Vector3<T>
   gen(void) {

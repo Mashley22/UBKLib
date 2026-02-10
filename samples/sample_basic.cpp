@@ -1,6 +1,6 @@
-import UBKLib;
-
 #include <iostream>
+
+import UBKLib;
 
 using T = double;
 
@@ -15,16 +15,19 @@ int main() {
   };
   
   ubk::FieldLineGenerator<T, ubk::Dipole<T>, params> generator;
+  ubk::UniformEquatorGenerator<T> rng(1.0, 15.0);
   
   for (int i = 1; i < 100; i++) {
-    ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine({2.0, 1.0 / i, 1.0 / i});
+    auto seed = rng.gen();
+    ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine(seed);
+    std::cout << fieldLine.points().size() << '\n';
     if (fieldLine.points().size() < 1000 ||
         fieldLine.points()[0].loc.ampSquared() < 1.1 ||
         fieldLine.points().back().loc.ampSquared() < 1.1) {
       throw;
     }
     calculateLongitudinalInvariants(fieldLine);
-    std::cout << fieldLine.points().size() << '\n';
+    std::cout << seed.x << "  " << seed.y << "    " << seed.z << '\n';
   }
 
   return 0;

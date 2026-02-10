@@ -12,6 +12,7 @@ endif()
 
 add_subdirectory(utils)
 add_subdirectory(field_models)
+add_subdirectory(seed_points)
 add_subdirectory(tracer)
 
 target_sources(UBKLib
