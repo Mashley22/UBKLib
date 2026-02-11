@@ -26,6 +26,8 @@ int main() {
       throw;
     }
     calculateLongitudinalInvariants(fieldLine);
+    auto points = fieldLine.getPointsWithK(5.0);
+    (void) points;
     std::cout << seed.x << "  " << seed.y << "    " << seed.z << '\n';
     std::cout << fieldLine.points().size() << '\n';
     std::cout << fieldLine.maxLongitudinalInvariant() << '\n';

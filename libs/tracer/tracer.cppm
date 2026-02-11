@@ -7,6 +7,7 @@ module;
 #include <cmath>
 #include <stdexcept>
 #include <cstdint>
+#include <utility>
 
 #include <UBK/macros.hpp>
 
@@ -14,6 +15,12 @@ export module UBKLib.tracer;
 
 import UBKLib.utils;
 import UBKLib.field_models;
+
+template<std::floating_point T>
+[[nodiscard]] static constexpr bool // anonymous namespace/ even putting this in the ubk namespace doesnt work....
+oppositeSigns(T a, T b) {
+  return (a * b) < 0;
+}
 
 export namespace ubk {
 
@@ -68,12 +75,28 @@ template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLine {
 public:
+  
+  struct UBKInfos {
+    Vector3<Re<T>> loc{};
+    Vector3<microTesla<T>> magneticField{};
+    T magneticIntensity{};
+    T electricPotential{};
+
+  };
 
   struct FullPointInfo {
     Vector3<Re<T>> loc{};
     Vector3<microTesla<T>> magneticField{};
     T magneticIntensity{};
     T longitudinalInvariant{};
+
+    operator UBKInfos() const UBK_NOEXCEPT {
+      return {
+        .loc = loc,
+        .magneticField = magneticField,
+        .magneticIntensity = magneticIntensity
+      };
+    };
   };
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
@@ -90,7 +113,45 @@ public:
 
   [[nodiscard]] constexpr const T
   maxLongitudinalInvariant(void) const UBK_NOEXCEPT {
-    return m_points.front().longitudinalInvariant; // Note that this should ALWAYS be subsituteable for .back()
+    return m_points.front().longitudinalInvariant; // Note that this should ALWAYS be subsituteable for back()
+  }
+
+  [[nodiscard]] constexpr std::array<UBKInfos, 2>
+  getPointsWithK(T k_val) {  
+    check(k_val != 0);
+    std::array<UBKInfos, 2> retVal;
+    std::size_t which = 0;
+    for (std::size_t i = 0; i < m_points.size() - 1; i++) {
+      if (k_val == m_points[i].longitudinalInvariant) {
+        retVal[which] = m_points[i];
+        if (which == 1) {
+          return retVal;
+        }
+        which++;
+      }
+      
+      T deltaK_1 = k_val - m_points[i].longitudinalInvariant;
+      T deltaK_2 = k_val - m_points[i + 1].longitudinalInvariant;
+      
+      if (oppositeSigns<T>(deltaK_1, deltaK_2)) {
+        Vector3<Re<T>> deltaLoc = m_points[i + 1].loc - m_points[i].loc;
+        Vector3<microTesla<T>> deltaField = m_points[i + 1].magneticField - m_points[i].magneticField;
+        T deltaK = m_points[i + 1].longitudinalInvariant - m_points[i].longitudinalInvariant;
+
+        T scale = deltaK_1 / deltaK;
+
+        retVal[which].loc = deltaLoc * scale + m_points[i].loc;
+        retVal[which].magneticField = deltaField * scale + m_points[i].magneticField;
+        retVal[which].magneticIntensity = retVal[which].magneticField.amp();
+
+        retVal[which] = m_points[i];
+        if (which == 1) {
+          return retVal;
+        }
+        which++;
+      }
+    }
+    std::unreachable();
   }
   
 private:
