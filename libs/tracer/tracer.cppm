@@ -391,6 +391,11 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
   
   fieldLine.points().front().longitudinalInvariant = longitudinalInvariant(0, 1);
   fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size() - 1, -1);
+  
+  // for a bit of certainty here
+  fieldLine.points().front().longitudinalInvariant = (fieldLine.points().front().longitudinalInvariant +
+    fieldLine.points().front().longitudinalInvariant) / 2;
+  fieldLine.points().front().longitudinalInvariant = fieldLine.points().back().longitudinalInvariant;
 
   for (std::size_t i = 1; i < fieldLine.points().size() - 1; i++) {
     bool forward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i + 1].magneticIntensity;

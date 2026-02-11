@@ -2,7 +2,35 @@
 
 import UBKLib;
 
+#define MIN_POINTS 1000
+#define MAX_TERMINATION_DIST 1.1
+
 namespace ubk {
+
+namespace {
+
+template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
+requires MagneticFieldModel<FieldModel, T>
+[[nodiscard]] constexpr bool
+singleMinima(const FieldLine<T, FieldModel, Params>& fieldLine) {
+  T minima = fieldLine.points().front().longitudinalInvariant;
+  bool foundMinima = false;
+  for (const auto& point : fieldLine.points()) {
+    if (point.longitudinalInvariant > minima) {
+      foundMinima = true;
+    }
+    else {
+      if (foundMinima) {
+        return false;
+      }
+      minima = point.longitudinalInvariant;
+    }
+  }
+
+  return true;
+}
+
+}
 
 TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
   constexpr FieldLineParams<double> params = {
@@ -10,13 +38,25 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
     .outterLim = 15,
     .maxStepDotField = 0.01,
     .failRatio = 1.5,
-    .maxStepCount = 1000,
+    .maxStepCount = 10000,
   };
   
   FieldLineGenerator<double, Dipole<double>, params> generator;
 
-  FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
-  REQUIRE(fieldLine.points().size() > 1000);
+  SECTION( "Generated field line is somewhat valid" ) {
+    FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
+    REQUIRE(fieldLine.points().size() > 1000);
+    REQUIRE(fieldLine.points().front().loc.amp() <= MAX_TERMINATION_DIST);
+    REQUIRE(fieldLine.points().back().loc.amp() <= MAX_TERMINATION_DIST);
+  }
+
+  SECTION( "K calculations are working" ) {
+    FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
+    calculateLongitudinalInvariants(fieldLine);
+    REQUIRE(fieldLine.points().back().longitudinalInvariant == fieldLine.points().front().longitudinalInvariant);
+    REQUIRE(singleMinima(fieldLine));
+  }
+
 }
 
 }
