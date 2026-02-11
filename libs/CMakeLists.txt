@@ -14,6 +14,7 @@ add_subdirectory(utils)
 add_subdirectory(field_models)
 add_subdirectory(seed_points)
 add_subdirectory(tracer)
+add_subdirectory(string_helpers)
 
 target_sources(UBKLib
   PUBLIC
