@@ -1,6 +1,6 @@
-import UBKLib;
-
 #include <catch2/catch_test_macros.hpp>
+
+import UBKLib;
 
 namespace ubk {
 
