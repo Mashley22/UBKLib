@@ -15,15 +15,20 @@ int main() {
   };
   
   ubk::FieldLineGenerator<T, ubk::Dipole<T>, params> generator;
+  ubk::UniformEquatorGenerator<T> rng(1.0, 15.0);
   
   for (int i = 1; i < 100; i++) {
-    ubk::Vector3<ubk::Re<T>> seed = {2.0, 0.0, 0.0};
+    auto seed = rng.gen();
     ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine(seed);
     if (fieldLine.points().size() < 1000 ||
         fieldLine.points()[0].loc.ampSquared() < 1.1 ||
         fieldLine.points().back().loc.ampSquared() < 1.1) {
       throw;
     }
+    calculateLongitudinalInvariants(fieldLine);
+    auto points = fieldLine.getPointsWithK(5.0);
+    (void) points;
+    std::cout << vec3ToStr(seed) << '\n';
     std::cout << fieldLine.points().size() << '\n';
     std::cout << fieldLine.maxLongitudinalInvariant() << '\n';
   }
