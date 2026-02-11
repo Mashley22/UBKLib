@@ -26,6 +26,8 @@ export namespace ubk {
 
 class BifercatingFieldLine {};
 
+class NoMinimaFound {};
+
 template<std::floating_point T>
 struct PointsPair {
   Vector3<Re<T>> begin, end;
@@ -152,6 +154,38 @@ public:
       }
     }
     std::unreachable();
+  }
+
+  [[nodiscard]] constexpr UBKInfos
+  getMinima(void) {
+    microTesla<T> min = m_points[0].longitudinalInvariant;
+    for (std::size_t i = 1; i < m_points.size() - 1; i++) {
+      if (min < m_points[i].longitudinalInvariant) {
+        FullPointInfo secondPoint;
+        if (m_points[i + 1].magneticIntensity < m_points[i - 1].magneticIntensity) {
+          secondPoint = m_points[i + 1];
+        }
+        else {
+          secondPoint = m_points[i - 1];
+        }
+
+        T scale = m_points[i].longitudinalInvariant /
+          (secondPoint.longitudinalInvariant - m_points[i].longitudinalInvariant);
+        
+        UBKInfos retVal;
+        Vector3<Re<T>> deltaLoc = secondPoint.loc - m_points[i].loc;
+        Vector3<microTesla<T>> deltaField = secondPoint.magneticField - m_points[i].magneticField;
+        
+        retVal.loc = m_points[i].loc + deltaLoc * scale;
+        retVal.magneticField = m_points[i].magneticField + deltaField * scale;
+        retVal.magneticIntensity = retVal.magneticField.amp();
+        return retVal;
+      }
+      else {
+        min = m_points[i].longitudinalInvariant;
+      }
+    }
+    throw NoMinimaFound{};
   }
   
 private:

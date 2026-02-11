@@ -28,7 +28,9 @@ int main() {
     calculateLongitudinalInvariants(fieldLine);
     auto points = fieldLine.getPointsWithK(5.0);
     (void) points;
-    std::cout << vec3ToStr(seed) << '\n';
+    auto minima = fieldLine.getMinima();
+    (void)minima;
+    std::cout << vec3ToStr(minima.loc) << '\n';
     std::cout << fieldLine.points().size() << '\n';
     std::cout << fieldLine.maxLongitudinalInvariant() << '\n';
   }
