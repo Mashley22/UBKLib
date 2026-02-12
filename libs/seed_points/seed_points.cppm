@@ -34,7 +34,7 @@ public:
   UniformEquatorGenerator(T minDist, T maxDist) 
   : m_minDist(minDist),
     m_maxDist(maxDist),
-    m_generator(std::uniform_real_distribution<T>(minDist, maxDist)) {
+    m_generator(std::uniform_real_distribution<T>(-maxDist, maxDist)) {
     check(minDist < maxDist);
   }
 
