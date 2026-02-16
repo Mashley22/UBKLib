@@ -14,6 +14,34 @@ import :check;
 export namespace ubk {
 
 template<std::floating_point T>
+[[nodiscard]] inline T
+sin(T val) {
+  return std::sin(val);
+}
+
+template<std::floating_point T>
+[[nodiscard]] inline T
+cos(T val) {
+  return std::cos(val);
+}
+
+template<std::floating_point T>
+[[nodiscard]] inline T
+tan(T val) {
+  return std::tan(val);
+}
+
+template<std::floating_point T>
+[[nodiscard]] constexpr T
+pow(T val, std::size_t exponent) {
+  T retVal = 1;
+  for (std::size_t i = 0; i < exponent; i++) {
+    retVal *= val; 
+  }
+  return retVal;
+}
+
+template<std::floating_point T>
 using Re = T;
 
 template<std::floating_point T>
@@ -150,9 +178,9 @@ public:
 
   [[nodiscard]] operator Vector3<T>() const UBK_NOEXCEPT {
     return Vector3<T>({
-      .x = r * std::sin(theta) * std::cos(phi),
-      .y = r * std::sin(theta) * std::sin(phi),
-      .z = r * std::cos(theta)  
+      .x = r * sin(theta) * cos(phi),
+      .y = r * sin(theta) * sin(phi),
+      .z = r * cos(theta)  
     });
   }
 };
