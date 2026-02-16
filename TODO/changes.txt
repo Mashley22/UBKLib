@@ -1,0 +1,3 @@
+Not using template parameters maybe ... Test this
+Change the findLontiduinalInvariants method to use a block scheme
+Find points over several k values rather than just one
