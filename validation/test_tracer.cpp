@@ -48,6 +48,10 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
     REQUIRE(fieldLine.points().size() > 1000);
     REQUIRE(fieldLine.points().front().loc.amp() <= MAX_TERMINATION_DIST);
     REQUIRE(fieldLine.points().back().loc.amp() <= MAX_TERMINATION_DIST);
+
+    for (const auto& points : fieldLine.points()) {
+      REQUIRE(points.loc.y == 0);
+    }
   }
 
   SECTION( "K calculations are working" ) {
@@ -57,6 +61,12 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
     REQUIRE(singleMinima(fieldLine));
   }
 
+  SECTION( "K = 0 point for a dipole should have z = 0" ) {
+    FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
+    calculateLongitudinalInvariants(fieldLine);
+    auto minima = fieldLine.getMinima();
+    REQUIRE(minima.loc.z == 0);
+  }
 }
 
 }

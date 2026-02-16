@@ -160,6 +160,10 @@ public:
   getMinima(void) {
     microTesla<T> min = m_points[0].longitudinalInvariant;
     for (std::size_t i = 1; i < m_points.size() - 1; i++) {
+      if (m_points[i].longitudinalInvariant == 0) {
+        return m_points[i];     
+      }
+
       if (min < m_points[i].longitudinalInvariant) {
         FullPointInfo secondPoint;
         if (m_points[i + 1].magneticIntensity < m_points[i - 1].magneticIntensity) {
@@ -261,12 +265,12 @@ private:
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStep_(Vector3<Re<T>> loc, Vector3<microTesla<T>> field, microTesla<T> fieldIntensity) {
     T h = 1 / fieldIntensity * std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
+      if constexpr (direc == FillDirection::BACKWARD) {
+        h = -1 * h;
+      }
     
     while(true) {
       Vector3<Re<T>> step = static_cast<T>(0.5) * h * (field + m_fieldModel.getField(loc + h * field));
-      if constexpr (direc == FillDirection::BACKWARD) {
-        step = -1 * step;
-      }
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc)) {
         return newLoc;
@@ -296,7 +300,6 @@ private:
   template<FillDirection direc>
   void 
   fill_(Vector3<Re<T>> starting) {
-    
     FieldLinePoint point = {
       .loc = starting,
       .magneticField = m_fieldModel.getField(point.loc),
