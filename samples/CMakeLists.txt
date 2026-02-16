@@ -27,3 +27,10 @@ target_sources(sample
   PRIVATE
     sample.cpp
 )
+
+add_sample(sample_k0)
+
+target_sources(sample_k0
+  PRIVATE
+    sample_k0.cpp
+)

@@ -27,7 +27,6 @@ int main() {
     }
     calculateLongitudinalInvariants(fieldLine);
     auto points = fieldLine.getPointsWithK(5.0);
-    (void) points;
     std::cout << vec3ToStr(points[0].loc) << '\n';
     std::cout << vec3ToStr(points[1].loc) << '\n';
   }
