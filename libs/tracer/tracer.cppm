@@ -418,7 +418,7 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
 
       idx = nextIdx();
 
-      if (idx == 0 || idx == fieldLine.points().size()) {
+      if (idx == 1 || idx == fieldLine.points().size() - 1) {
         break;
       }
     }
