@@ -19,7 +19,7 @@ import UBKLib.field_models;
 template<std::floating_point T>
 [[nodiscard]] static constexpr bool // anonymous namespace/ even putting this in the ubk namespace doesnt work....
 oppositeSigns(T a, T b) {
-  return (a * b) < 0;
+  return (a * b) <= 0;
 }
 
 export namespace ubk {
@@ -117,12 +117,19 @@ public:
   maxLongitudinalInvariant(void) const UBK_NOEXCEPT {
     return m_points.front().longitudinalInvariant; // Note that this should ALWAYS be subsituteable for back()
   }
-
+  
+  /**
+   *@brief get the two mirror points with a value of k larger equal to the value requested
+   *
+   *@note undefined if k_val > max_k along the field line
+   *
+  */
   [[nodiscard]] constexpr std::array<UBKInfos, 2>
   getPointsWithK(T k_val) {  
     check(k_val != 0);
     std::array<UBKInfos, 2> retVal;
     std::size_t which = 0;
+
     for (std::size_t i = 0; i < m_points.size() - 1; i++) {
       if (k_val == m_points[i].longitudinalInvariant) {
         retVal[which] = m_points[i];
@@ -140,13 +147,17 @@ public:
         Vector3<microTesla<T>> deltaField = m_points[i + 1].magneticField - m_points[i].magneticField;
         T deltaK = m_points[i + 1].longitudinalInvariant - m_points[i].longitudinalInvariant;
 
-        T scale = deltaK_1 / deltaK;
+        if (deltaK == 0) {
+          retVal[which] = m_points[i];
+        }
+        else {
+          T scale = deltaK_1 / deltaK;
 
-        retVal[which].loc = deltaLoc * scale + m_points[i].loc;
-        retVal[which].magneticField = deltaField * scale + m_points[i].magneticField;
-        retVal[which].magneticIntensity = retVal[which].magneticField.amp();
+          retVal[which].loc = deltaLoc * scale + m_points[i].loc;
+          retVal[which].magneticField = deltaField * scale + m_points[i].magneticField;
+          retVal[which].magneticIntensity = retVal[which].magneticField.amp();
+        }
 
-        retVal[which] = m_points[i];
         if (which == 1) {
           return retVal;
         }
@@ -431,26 +442,29 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
   
   // for a bit of certainty here
   fieldLine.points().front().longitudinalInvariant = (fieldLine.points().front().longitudinalInvariant +
-    fieldLine.points().front().longitudinalInvariant) / 2;
+    fieldLine.points().back().longitudinalInvariant) / 2;
   fieldLine.points().front().longitudinalInvariant = fieldLine.points().back().longitudinalInvariant;
 
   for (std::size_t i = 1; i < fieldLine.points().size() - 1; i++) {
-    bool forward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i + 1].magneticIntensity;
-    bool backward = fieldLine.points()[i].magneticIntensity > fieldLine.points()[i - 1].magneticIntensity;
+    auto dB_forward = fieldLine.points()[i + 1].magneticIntensity - fieldLine.points()[i].magneticIntensity;
+    auto dB_backward = fieldLine.points()[i].magneticIntensity - fieldLine.points()[i - 1].magneticIntensity;
 
-    if (forward && backward) {
-      std::terminate();
-    }
-    else if (!forward && !backward) {
-      fieldLine.points()[i].longitudinalInvariant = 0;
-    }
-    else {
-      if (forward) {
+    bool turningPointRegion = !oppositeSigns(dB_backward, dB_forward);
+
+    if (!turningPointRegion) {
+      if (dB_forward > 0) {
         fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, 1);
       }
-      if (backward) {
+      else if (dB_backward > 0) {
         fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, -1);
       }
+      else {
+        throw BifercatingFieldLine{}; // should be unreachable
+      }
+    }
+    else {
+      // the current points lies in the turning point region
+      fieldLine.points()[i].longitudinalInvariant = 0;
     }
   }
 }

@@ -1,3 +1,4 @@
 Not using template parameters maybe ... Test this
 Change the findLontiduinalInvariants method to use a block scheme
 Find points over several k values rather than just one
+Better way of interpolating at the turning point region of the magnetic intensity
