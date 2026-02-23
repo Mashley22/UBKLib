@@ -17,7 +17,7 @@ import UBKLib.utils;
 import UBKLib.field_models;
 
 template<std::floating_point T>
-[[nodiscard]] static constexpr bool // anonymous namespace/ even putting this in the ubk namespace doesnt work....
+[[nodiscard]] constexpr bool // used in constexpr function, cannot have internal linkage
 oppositeSigns(T a, T b) {
   return (a * b) <= 0;
 }

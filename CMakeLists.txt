@@ -1,7 +1,7 @@
 # since the c++ modules stuff
 cmake_minimum_required(VERSION 3.28)
 
-project(UBK VERSION 0.0.1 LANGUAGES CXX)
+project(UBK VERSION 0.0.1 LANGUAGES CXX C)
 
 set(MINIMUM_CXX_STANDARD 23)
 
@@ -43,7 +43,14 @@ set(PEDANTIC_COMPILE_OPTIONS
   -Wunreachable-code
 )
 
+add_subdirectory(extern/cxform2)
+
 add_library(UBKLib)
+
+target_link_libraries(UBKLib
+  PUBLIC
+    cxform
+)
 
 target_include_directories(UBKLib
   PRIVATE 

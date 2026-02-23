@@ -1,5 +1,6 @@
 module;
 
+#include <array>
 #include <concepts>
 #include <cmath>
 
@@ -157,6 +158,26 @@ struct Vector3 {
   }
 
   bool operator==(const Vector3&) const UBK_NOEXCEPT = default;
+
+  template<std::floating_point T_arr = T>
+  [[nodiscard]] constexpr static Vector3<T>
+  fromArr(const std::array<T_arr, 3> arr) UBK_NOEXCEPT {
+    return {
+      .x = static_cast<T>(arr[0]),
+      .y = static_cast<T>(arr[1]),
+      .z = static_cast<T>(arr[2]),
+    };
+  }
+
+  template<std::floating_point T_arr = T>
+  [[nodiscard]] constexpr std::array<T_arr, 3>
+  toArr(void) const UBK_NOEXCEPT {
+    std::array<T_arr, 3> arr;
+    arr[0] = static_cast<T_arr>(x);
+    arr[1] = static_cast<T_arr>(y);
+    arr[2] = static_cast<T_arr>(z);
+    return arr;
+  }
 };
 
 template<std::floating_point T, typename dist_t = Re<T>>

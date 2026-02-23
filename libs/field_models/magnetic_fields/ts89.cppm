@@ -1,10 +1,11 @@
 module;
 
+#include <array>
 #include <concepts>
 #include <cmath>
 #include <span>
 
-#include <iostream>
+#include <cxform.h>
 
 #include <UBK/macros.hpp>
 
@@ -13,7 +14,27 @@ export module UBKLib.field_models:magnetic_fields.ts89;
 import :traits;
 import UBKLib.utils;
 
+template<std::floating_point T>
+[[nodiscard]] static ubk::Vector3<ubk::Re<T>>
+m_geoToGsm(ubk::Vector3<ubk::Re<T>> val, const double time) UBK_NOEXCEPT {
+  std::array<T, 3> out;
+  cxform2(GEO, GSM, time, val.toArr().data(), out.data());
+
+  return ubk::Vector3<ubk::Re<T>>::template fromArr<T>(out);
+}
+
+template<std::floating_point T>
+[[nodiscard]] static ubk::Vector3<ubk::Re<T>>
+m_gsmToGeo(ubk::Vector3<ubk::Re<T>> val, const double time) UBK_NOEXCEPT {
+  std::array<T, 3> out;
+  cxform2(GSM, GEO, time, val.toArr().data(), out.data());
+
+  return ubk::Vector3<ubk::Re<T>>::template fromArr<T>(out);
+}
+
 export namespace ubk {
+
+
 
 // NOTE NEED TO BE CAREFUL OF FLOATING POINT MATH STUFF, SHOULD BE FINE BUT YOU NEVER KNOW
 // For ease of comparing to original will provide both big fuck off param tables as well as
@@ -168,10 +189,10 @@ public:
     T x_rc_16 = pow(x_rc, 2) + 16;
 
     T sx_rc = std::sqrt(x_rc_16);
-    T zs1 = 0.5 * tan(dipole_tilt) * (x_rc - sx_rc);
+    T zs1 = 0.5 * tan(m_dipole_tilt) * (x_rc - sx_rc);
 
     T y410 = pow(coords.y, 4) + static_cast<T>(1e4);
-    T sy4 = sin(dipole_tilt) / y410;
+    T sy4 = sin(m_dipole_tilt) / y410;
 
     T gsy4 = G_degreeOfTransverseBending() * sy4;
     T d2zsgy = -1 * sy4 / y410 * 4e4 * pow(coords.y, 3);
@@ -215,9 +236,9 @@ public:
     return {
       .zr = zr,
       .der4 = {
-        .x = dbxdp * cos(dipole_tilt) + dbzdp * sin(dipole_tilt),
+        .x = dbxdp * cos(m_dipole_tilt) + dbzdp * sin(m_dipole_tilt),
         .y = facxy * yzr,
-        .z = dbzdp * cos(dipole_tilt) - dbxdp * sin(dipole_tilt)
+        .z = dbzdp * cos(m_dipole_tilt) - dbxdp * sin(m_dipole_tilt)
       }
     }; 
   }
@@ -228,8 +249,8 @@ public:
     Vector3<T> der15;
     Vector3<T> der16;
 
-    TailCurrentSheetInfo(Vector3<T> der0_val, Vector3<T> der1_val, T dipole_tilt) 
-      : der0(der0_val), der1(der1_val), der15(der0_val * pow(dipole_tilt, 2)), der16(der1_val * pow(dipole_tilt, 2)) {}
+    TailCurrentSheetInfo(Vector3<T> der0_val, Vector3<T> der1_val, T m_dipole_tilt) 
+      : der0(der0_val), der1(der1_val), der15(der0_val * pow(m_dipole_tilt, 2)), der16(der1_val * pow(m_dipole_tilt, 2)) {}
   };
 
   [[nodiscard]] TailCurrentSheetInfo
@@ -294,15 +315,15 @@ public:
     T dbzc2 = w * f9 + xdwx * f1 + wtfs * pow(f5, 3);
     
     return {
-      { .x = dbxc1 * cos(dipole_tilt) + dbzc1 * sin(dipole_tilt),
+      { .x = dbxc1 * cos(m_dipole_tilt) + dbzc1 * sin(m_dipole_tilt),
         .y = brrz1 * coords.y * ringCurrentInfo.zr,
-        .z = dbzc1 * cos(dipole_tilt) - dbxc1 * sin(dipole_tilt)}, 
+        .z = dbzc1 * cos(m_dipole_tilt) - dbxc1 * sin(m_dipole_tilt)}, 
 
-      { .x = dbxc2 * cos(dipole_tilt) + dbzc2 * sin(dipole_tilt),
+      { .x = dbxc2 * cos(m_dipole_tilt) + dbzc2 * sin(m_dipole_tilt),
         .y = brrz2 * ringCurrentInfo.zr,
-        .z = dbzc2 * cos(dipole_tilt) - dbxc2 * sin(dipole_tilt)},
+        .z = dbzc2 * cos(m_dipole_tilt) - dbxc2 * sin(m_dipole_tilt)},
       
-      dipole_tilt
+      m_dipole_tilt
     };
   }
 
@@ -355,9 +376,9 @@ public:
       .z = fzpl + fzmn
     };
     Vector3<T> der3 = {
-      .x = (fxpl - fxmn) * sin(dipole_tilt),
-      .y = (fypl - fymn) * sin(dipole_tilt),
-      .z = (fzpl - fzmn) * sin(dipole_tilt)
+      .x = (fxpl - fxmn) * sin(m_dipole_tilt),
+      .y = (fypl - fymn) * sin(m_dipole_tilt),
+      .z = (fzpl - fzmn) * sin(m_dipole_tilt)
     };
 
     return m_params()[2] * der2 + m_params()[3] * der3;
@@ -367,8 +388,8 @@ public:
   chapmanFerraroField(const Vector3<T> coords) const UBK_NOEXCEPT {
 
     T ex = std::exp(coords.x / DX_chapmanFerraroCharacteristicScale());
-    T ec = ex * cos(dipole_tilt);
-    T es = ex * sin(dipole_tilt);
+    T ec = ex * cos(m_dipole_tilt);
+    T es = ex * sin(m_dipole_tilt);
     T ecz = ec * coords.z;
     T esz = es * coords.z;
     T eszy2 = esz * pow(coords.y, 2);
@@ -398,9 +419,11 @@ public:
 
   [[nodiscard]] Vector3<microTesla<T>>
   getField(Vector3<T> coords) const UBK_NOEXCEPT {
+    coords = geoToGsm(coords);
+
     Vector3<T> coords_sm = {
-      .x = coords.x * cos(dipole_tilt) - coords.z * sin(dipole_tilt),
-      .z = coords.x * sin(dipole_tilt) + coords.z * cos(dipole_tilt)
+      .x = coords.x * cos(m_dipole_tilt) - coords.z * sin(m_dipole_tilt),
+      .z = coords.x * sin(m_dipole_tilt) + coords.z * cos(m_dipole_tilt)
     };
     
     ZsCurrentSheetShapeInfo zs = zsTailCurrentSheetShape(coords, coords_sm);
@@ -408,7 +431,7 @@ public:
 
     Vector3<T> ringCurrentField = ringCurrentInfo.der4 * m_params()[4];
 
-    return (ringCurrentField + 
+    return gsmToGeo(ringCurrentField + 
            tailCurrentSheetField(coords, coords_sm, zs, ringCurrentInfo) +
            chapmanFerraroField(coords) +
            closureCurrentField(coords)) / 1000;
@@ -416,11 +439,22 @@ public:
 
 private:
   int m_iop{0};
-  T dipole_tilt{0};
+  double m_time{0};
+  T m_dipole_tilt{0};
 
   [[nodiscard]] constexpr std::span<const T>
   m_params(void) const UBK_NOEXCEPT{
     return {params[m_iop], 30};
+  }
+
+  [[nodiscard]] Vector3<T>
+  geoToGsm(Vector3<T> val) const UBK_NOEXCEPT {
+    return m_geoToGsm(val, m_time);
+  }
+
+  [[nodiscard]] Vector3<T>
+  gsmToGeo(Vector3<T> val) const UBK_NOEXCEPT {
+    return m_gsmToGeo(val, m_time);
   }
 
 };
