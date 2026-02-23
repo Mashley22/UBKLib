@@ -36,4 +36,12 @@ TEST_CASE( "utils_math_vector3", "[utils][math][Vector3]" ) { // not testing bot
   }
 }
 
+TEST_CASE( "test_math_factorial", "[utils][math][factorial]" ) {
+  STATIC_REQUIRE(factorial(0) == 1);
+  STATIC_REQUIRE(factorial(1) == 1);
+  STATIC_REQUIRE(factorial(2) == 2);
+  STATIC_REQUIRE(factorial(3) == 6);
+  STATIC_REQUIRE(factorial(4) == 24);
+}
+
 }

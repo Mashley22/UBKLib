@@ -14,16 +14,27 @@ import :check;
 
 export namespace ubk {
 
+[[nodiscard]] constexpr std::size_t
+factorial(std::size_t val) UBK_NOEXCEPT {
+  std::size_t retVal = 1;
+  for (std::size_t i = 2; i <= val; i++) {
+    retVal *= i;
+  }
+  return retVal;
+}
+
 template<std::floating_point T>
-[[nodiscard]] inline T
-sin(T val) {
-  return std::sin(val);
+[[nodiscard]] constexpr T
+sin(T val) UBK_NOEXCEPT {
+  T val2 = val * val;
+  return val * (1 - val2 / factorial(3));
 }
 
 template<std::floating_point T>
 [[nodiscard]] inline T
-cos(T val) {
-  return std::cos(val);
+cos(T val) UBK_NOEXCEPT {
+  T val2 = val * val;
+  return 1 - val2 / factorial(2);
 }
 
 template<std::floating_point T>
