@@ -184,6 +184,10 @@ public:
           secondPoint = m_points[i - 1];
         }
 
+        if (secondPoint.longitudinalInvariant == m_points[i].longitudinalInvariant) {
+          return m_points[i];
+        }
+
         T scale = m_points[i].longitudinalInvariant /
           (secondPoint.longitudinalInvariant - m_points[i].longitudinalInvariant);
         
@@ -449,21 +453,17 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
     auto dB_forward = fieldLine.points()[i + 1].magneticIntensity - fieldLine.points()[i].magneticIntensity;
     auto dB_backward = fieldLine.points()[i].magneticIntensity - fieldLine.points()[i - 1].magneticIntensity;
 
-    bool turningPointRegion = !oppositeSigns(dB_backward, dB_forward);
+    bool turningPointRegion = oppositeSigns(dB_backward, dB_forward);
 
     if (!turningPointRegion) {
       if (dB_forward > 0) {
-        fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, 1);
-      }
-      else if (dB_backward > 0) {
         fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, -1);
       }
       else {
-        throw BifercatingFieldLine{}; // should be unreachable
+        fieldLine.points()[i].longitudinalInvariant = longitudinalInvariant(i, 1);
       }
     }
     else {
-      // the current points lies in the turning point region
       fieldLine.points()[i].longitudinalInvariant = 0;
     }
   }
