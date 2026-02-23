@@ -4,6 +4,6 @@
 [submodule "extern/xoshiro"]
 	path = extern/xoshiro
 	url = git@github.com:nessan/xoshiro.git
-[submodule "extern/cxform"]
-	path = extern/cxform
-	url = git@github.com:bsd-conqueror/cxform.git
+[submodule "extern/cxform2"]
+	path = extern/cxform2
+	url = git@github.com:Mashley22/cxform2.git
