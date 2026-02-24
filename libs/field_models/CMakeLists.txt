@@ -5,5 +5,6 @@ target_sources(UBKLib
       electric_potentials/cross_tail.cppm
       magnetic_fields/dipole.cppm
       magnetic_fields/ts89.cppm
+      magnetic_fields/igrf13.cppm
       field_models.cppm
 )
