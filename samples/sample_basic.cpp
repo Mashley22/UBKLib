@@ -4,6 +4,17 @@ import UBKLib;
 
 using T = double;
 
+struct Field {
+  ubk::Ts89<T> ts89;
+  ubk::Dipole<T> dipole;
+
+  [[nodiscard]] ubk::Vector3<ubk::nanoTesla<T>>
+  getField(ubk::Vector3<T> pos) const {
+    return ts89.getField(pos) + dipole.getField(pos);
+  }
+
+};
+
 int main() {
   constexpr ubk::FieldLineParams<T> params = {
     .innerLim = 1.05,
@@ -14,17 +25,24 @@ int main() {
     .maxStepCount = 10000,
   };
   
-  ubk::FieldLineGenerator<T, ubk::Dipole<T>, params> generator;
+  ubk::FieldLineGenerator<T, Field, params> generator;
+  ubk::FieldLineGenerator<T, ubk::Dipole<T>, params> generator2;
   
-  for (int i = 1; i < 100; i++) {
+  for (int i = 0; i < 1; i++) {
     ubk::Vector3<ubk::Re<T>> seed = {2.0, 0.0, 0.0};
-    ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine(seed);
+    ubk::FieldLine<T, Field, params> fieldLine = generator.generateFieldLine(seed);
+    ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine2 = generator2.generateFieldLine(seed);
     if (fieldLine.points().size() < 1000 ||
         fieldLine.points()[0].loc.ampSquared() < 1.1 ||
         fieldLine.points().back().loc.ampSquared() < 1.1) {
       throw;
     }
-    std::cout << fieldLine.points().size() << '\n';
+    for (const auto& point : fieldLine.points()) {
+      std::cout << ubk::vec3ToStr(point.loc) << '\n';
+    }
+    for (const auto& point : fieldLine2.points()) {
+      std::cout << ubk::vec3ToStr(-1 * point.loc) << '\n';
+    }
   }
 
   return 0;

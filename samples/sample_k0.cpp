@@ -18,9 +18,9 @@ int main() {
   ubk::FieldLineGenerator<T, ubk::Dipole<T>, params> generator;
   ubk::UniformEquatorGenerator<T> rng(1.0, 15.0);
   
-  for (int i = 0; i < 100; i++) {
+  std::cout << std::setprecision(14);
+  for (int i = 0; i < 1; i++) {
     auto seed = rng.gen();
-    std::cout << std::setprecision(14);
     ubk::FieldLine<T, ubk::Dipole<T>, params> fieldLine = generator.generateFieldLine(seed);
     if (fieldLine.points().size() < 1000 ||
         fieldLine.points()[0].loc.ampSquared() < 1.1 ||
