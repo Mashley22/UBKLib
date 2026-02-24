@@ -63,8 +63,8 @@ struct FieldLineParams {
 template<std::floating_point T, class FieldModel>
 requires MagneticFieldModel<FieldModel, T>
 [[nodiscard]] T
-integrationStep(PointsPair<T> points, const FieldModel& field, microTesla<T> mirrorPointMagneticIntensity) {
-  microTesla<T> localMagneticIntensity = field.getField(points.begin).amp();
+integrationStep(PointsPair<T> points, const FieldModel& field, nanoTesla<T> mirrorPointMagneticIntensity) {
+  nanoTesla<T> localMagneticIntensity = field.getField(points.begin).amp();
   T distSquared = points.diff().ampSquared();
   return std::sqrt((localMagneticIntensity - mirrorPointMagneticIntensity) * distSquared);
 }
@@ -80,7 +80,7 @@ public:
   
   struct UBKInfos {
     Vector3<Re<T>> loc{};
-    Vector3<microTesla<T>> magneticField{};
+    Vector3<nanoTesla<T>> magneticField{};
     T magneticIntensity{};
     T electricPotential{};
 
@@ -88,7 +88,7 @@ public:
 
   struct FullPointInfo {
     Vector3<Re<T>> loc{};
-    Vector3<microTesla<T>> magneticField{};
+    Vector3<nanoTesla<T>> magneticField{};
     T magneticIntensity{};
     T longitudinalInvariant{};
 
@@ -144,7 +144,7 @@ public:
       
       if (oppositeSigns<T>(deltaK_1, deltaK_2)) {
         Vector3<Re<T>> deltaLoc = m_points[i + 1].loc - m_points[i].loc;
-        Vector3<microTesla<T>> deltaField = m_points[i + 1].magneticField - m_points[i].magneticField;
+        Vector3<nanoTesla<T>> deltaField = m_points[i + 1].magneticField - m_points[i].magneticField;
         T deltaK = m_points[i + 1].longitudinalInvariant - m_points[i].longitudinalInvariant;
 
         if (deltaK == 0) {
@@ -169,7 +169,7 @@ public:
 
   [[nodiscard]] constexpr UBKInfos
   getMinima(void) {
-    microTesla<T> min = m_points[0].longitudinalInvariant;
+    nanoTesla<T> min = m_points[0].longitudinalInvariant;
     for (std::size_t i = 1; i < m_points.size() - 1; i++) {
       if (m_points[i].longitudinalInvariant == 0) {
         return m_points[i];     
@@ -193,7 +193,7 @@ public:
         
         UBKInfos retVal;
         Vector3<Re<T>> deltaLoc = secondPoint.loc - m_points[i].loc;
-        Vector3<microTesla<T>> deltaField = secondPoint.magneticField - m_points[i].magneticField;
+        Vector3<nanoTesla<T>> deltaField = secondPoint.magneticField - m_points[i].magneticField;
         
         retVal.loc = m_points[i].loc + deltaLoc * scale;
         retVal.magneticField = m_points[i].magneticField + deltaField * scale;
@@ -278,8 +278,8 @@ private:
   
   template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
-  takeStep_(Vector3<Re<T>> loc, Vector3<microTesla<T>> field, microTesla<T> fieldIntensity) {
-    T h = 1 / fieldIntensity * std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
+  takeStep_(Vector3<Re<T>> loc, Vector3<nanoTesla<T>> field, nanoTesla<T> fieldIntensity) {
+    T h = std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
       if constexpr (direc == FillDirection::BACKWARD) {
         h = -1 * h;
       }
@@ -321,7 +321,7 @@ private:
     };
     point.magneticIntensity = point.magneticField.amp();
 
-    microTesla<T> minMagneticIntensity = point.magneticIntensity;
+    nanoTesla<T> minMagneticIntensity = point.magneticIntensity;
     bool foundMinima = false;
 
     std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
@@ -330,7 +330,7 @@ private:
       std::runtime_error("Couldn't even take one step!");
     }
 
-    auto checkNotBifercating = [&](microTesla<T> newIntensity) {
+    auto checkNotBifercating = [&](nanoTesla<T> newIntensity) {
       if (newIntensity > minMagneticIntensity) {
         foundMinima = true;
       }
@@ -372,7 +372,7 @@ private:
 
   void
   trimForward_(void) {
-    microTesla<T> targetIntensity = m_backward.back().magneticIntensity;
+    nanoTesla<T> targetIntensity = m_backward.back().magneticIntensity;
     FieldLinePoint prevPoint = m_forward.back();
     m_forward.pop_back();
 
@@ -393,7 +393,7 @@ private:
 
   void
   trimBackward_(void) {
-    microTesla<T> targetIntensity = m_forward.back().magneticIntensity;
+    nanoTesla<T> targetIntensity = m_forward.back().magneticIntensity;
     FieldLinePoint prevPoint = m_backward.back();
     m_backward.pop_back();
 

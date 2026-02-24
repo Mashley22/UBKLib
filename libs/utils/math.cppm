@@ -60,7 +60,7 @@ template<std::floating_point T>
 using kV = T;
 
 template<std::floating_point T>
-using microTesla = T;
+using nanoTesla = T;
 
 template<std::floating_point T>
 struct Vector3 {

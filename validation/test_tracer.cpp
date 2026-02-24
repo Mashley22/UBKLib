@@ -45,7 +45,7 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
 
   SECTION( "Generated field line is somewhat valid" ) {
     FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
-    REQUIRE(fieldLine.points().size() > 1000);
+    REQUIRE(fieldLine.points().size() > 100);
     REQUIRE(fieldLine.points().front().loc.amp() <= MAX_TERMINATION_DIST);
     REQUIRE(fieldLine.points().back().loc.amp() <= MAX_TERMINATION_DIST);
 

@@ -327,7 +327,7 @@ public:
     };
   }
 
-  [[nodiscard]] Vector3<T>
+  [[nodiscard]] Vector3<nanoTesla<T>>
   tailCurrentSheetField(const Vector3<T> coords,
                         const Vector3<T> coords_sm,
                         const ZsCurrentSheetShapeInfo currentSheetShape,
@@ -341,7 +341,7 @@ public:
            tailCurrentSheetInfo.der16 * m_params()[16];
   }
 
-  [[nodiscard]] constexpr Vector3<T>
+  [[nodiscard]] constexpr Vector3<nanoTesla<T>>
   closureCurrentField(const Vector3<T> coords) const UBK_NOEXCEPT {
 
     T zpl = coords.z + RT;
@@ -384,7 +384,7 @@ public:
     return m_params()[2] * der2 + m_params()[3] * der3;
   }
 
-  [[nodiscard]] Vector3<T>
+  [[nodiscard]] Vector3<nanoTesla<T>>
   chapmanFerraroField(const Vector3<T> coords) const UBK_NOEXCEPT {
 
     T ex = std::exp(coords.x / DX_chapmanFerraroCharacteristicScale());
@@ -417,7 +417,7 @@ public:
     };
   }
 
-  [[nodiscard]] Vector3<microTesla<T>>
+  [[nodiscard]] Vector3<nanoTesla<T>>
   getField(Vector3<T> coords) const UBK_NOEXCEPT {
     coords = geoToGsm(coords);
 
@@ -434,7 +434,7 @@ public:
     return gsmToGeo(ringCurrentField + 
            tailCurrentSheetField(coords, coords_sm, zs, ringCurrentInfo) +
            chapmanFerraroField(coords) +
-           closureCurrentField(coords)) / 1000;
+           closureCurrentField(coords));
   }
 
 private:

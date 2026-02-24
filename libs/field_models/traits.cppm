@@ -33,7 +33,7 @@ concept PotentialField = ScalarField<Field, inFP_t, outFP_t>;
  *@brief the pos is in Re
 */
 template<typename Field, typename fp_t = double>
-concept MagneticFieldModel = VectorField<Field, Re<fp_t>, microTesla<fp_t>>;
+concept MagneticFieldModel = VectorField<Field, Re<fp_t>, nanoTesla<fp_t>>;
 
 template<typename Field, typename fp_t = double>
 concept ElectricPotentialModel = PotentialField<Field, Re<fp_t>, kV<fp_t>>;
