@@ -25,20 +25,32 @@ factorial(std::size_t val) UBK_NOEXCEPT {
 
 template<std::floating_point T>
 [[nodiscard]] constexpr T
-sin(T val) UBK_NOEXCEPT {
-  T val2 = val * val;
-  return val * (1 - val2 / factorial(3));
+sin(T val) {
+  if (std::is_constant_evaluated()) {
+    T val2 = val * val;
+    return val * (1 - val2 / factorial(3));
+  }
+  return std::sin(val);
 }
 
 template<std::floating_point T>
-[[nodiscard]] inline T
-cos(T val) UBK_NOEXCEPT {
-  T val2 = val * val;
-  return 1 - val2 / factorial(2);
+[[nodiscard]] constexpr T
+cos(T val) {
+  if (std::is_constant_evaluated()) {
+    T val2 = val * val;
+    return 1 - val2 / factorial(2);
+  }
+  return std::cos(val);
 }
 
 template<std::floating_point T>
-[[nodiscard]] inline T
+[[nodiscard]] T
+acos(T val) {
+  return std::acos(val);
+}
+
+template<std::floating_point T>
+[[nodiscard]] constexpr T
 tan(T val) {
   return std::tan(val);
 }
@@ -191,12 +203,15 @@ struct Vector3 {
   }
 };
 
+/**
+ *@brief pure struct to stll allow the initializer lists
+ *
+ */
 template<std::floating_point T, typename dist_t = Re<T>>
-class SphericalPolar {
-public:
+struct SphericalPolar_t {
   T theta;
-  dist_t r;
   T phi;
+  dist_t r;
 
   [[nodiscard]] constexpr T
   ampSquared(void) const UBK_NOEXCEPT {
@@ -208,12 +223,36 @@ public:
     return r;
   };
 
-  [[nodiscard]] operator Vector3<T>() const UBK_NOEXCEPT {
-    return Vector3<T>({
+  [[nodiscard]] explicit operator Vector3<dist_t>() const UBK_NOEXCEPT {
+    return Vector3<dist_t>({
       .x = r * sin(theta) * cos(phi),
       .y = r * sin(theta) * sin(phi),
       .z = r * cos(theta)  
     });
+  }
+};
+
+template<std::floating_point T, typename dist_t = Re<T>>
+class SphericalPolar : public SphericalPolar_t<T, dist_t> {
+public:
+  using Base = SphericalPolar_t<T, dist_t>;
+
+  SphericalPolar(const SphericalPolar_t<T, dist_t> base) UBK_NOEXCEPT : SphericalPolar_t<T, dist_t>(base) {}
+
+  SphericalPolar(const Vector3<dist_t> cartesian) UBK_NOEXCEPT {
+
+    check(cartesian.ampSquared() != 0);
+
+    Base::r = cartesian.amp();
+    
+    Base::theta = acos(cartesian.z / Base::r);
+    
+    if (cartesian.x == 0 && cartesian.y == 0) {
+      Base::phi = 0;
+    }
+    else {
+      Base::phi = acos(cartesian.x / (Base::r * sin(Base::theta)));
+    }
   }
 };
 
