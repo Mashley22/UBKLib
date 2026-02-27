@@ -2,6 +2,7 @@ module;
 
 #include <array>
 #include <concepts>
+#include <cmath>
 
 #include <UBK/macros.hpp>
 
@@ -961,8 +962,8 @@ public:
 
   };
 
-  constexpr void 
-  init(std::size_t year, std::size_t month, std::size_t day) UBK_NOEXCEPT {
+  void
+  init(std::size_t year = 1950, std::size_t month = 1, std::size_t day = 1) {
     check(year >= Data::START_YEAR && year <= Data::END_YEAR);
     
     if (year >= Data::LAST_DEFINED_YEAR) {
@@ -985,12 +986,12 @@ public:
       }
     }
   }
-    
-  constexpr 
-  Igrf13(std::size_t year = 1950, std::size_t month = 1, std::size_t day = 1) UBK_NOEXCEPT {
-    init(year, month, day);
-  }
 
+  [[nodiscard]] T
+  dipole_tilt(void) {
+    return -acos(-m_g[0][1] / std::sqrt(pow(m_g[0][1], 2) + pow(m_g[0][1], 2) + pow(m_h[1][1], 2)));
+  }
+    
   [[nodiscard]] Vector3<nanoTesla<T>>
   getField(Vector3<Re<T>> coords) const UBK_NOEXCEPT {
     T b_radial{0};
@@ -1060,6 +1061,7 @@ public:
 
     return sphericalPolarToCartesian(b_radial, b_theta, b_phi, sphericalCoords);
   }
+
 
 private:
   std::array<std::array<T, Data::COEFF_SIZE>, Data::COEFF_SIZE> m_g = Data::g1900;
