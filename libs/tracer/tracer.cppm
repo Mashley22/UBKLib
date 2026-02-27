@@ -8,6 +8,7 @@ module;
 #include <stdexcept>
 #include <cstdint>
 #include <utility>
+#include <fstream>
 
 #include <UBK/macros.hpp>
 
@@ -86,7 +87,7 @@ public:
 
   };
 
-  struct FullPointInfo {
+  struct PointInfo {
     Vector3<Re<T>> loc{};
     Vector3<nanoTesla<T>> magneticField{};
     T magneticIntensity{};
@@ -103,12 +104,12 @@ public:
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
 
-  [[nodiscard]] constexpr std::span<const FullPointInfo>
+  [[nodiscard]] constexpr std::span<const PointInfo>
   points(void) const UBK_NOEXCEPT {
     return m_points;
   }
 
-  [[nodiscard]] constexpr std::span<FullPointInfo>
+  [[nodiscard]] constexpr std::span<PointInfo>
   points(void) UBK_NOEXCEPT {
     return m_points;
   }
@@ -176,7 +177,7 @@ public:
       }
 
       if (min < m_points[i].longitudinalInvariant) {
-        FullPointInfo secondPoint;
+        PointInfo secondPoint;
         if (m_points[i + 1].magneticIntensity < m_points[i - 1].magneticIntensity) {
           secondPoint = m_points[i + 1];
         }
@@ -208,14 +209,14 @@ public:
   }
   
 private:
-  std::vector<FullPointInfo> m_points;
+  std::vector<PointInfo> m_points;
 };
 
 template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLineGenerator {
 public:
-  using FieldLinePoint = FieldLine<T, FieldModel, Params>::FullPointInfo;
+  using FieldLinePoint = FieldLine<T, FieldModel, Params>::PointInfo;
 
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
@@ -231,7 +232,6 @@ public:
     else {
       trimBackward_();
     }
-
 
     for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
@@ -279,14 +279,16 @@ private:
   template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStep_(Vector3<Re<T>> loc, Vector3<nanoTesla<T>> field, nanoTesla<T> fieldIntensity) {
-    T h = std::min(Params.maxStepSize, Params.maxStepDotField / fieldIntensity);
-      if constexpr (direc == FillDirection::BACKWARD) {
-        h = -1 * h;
-      }
+    T h = Params.maxStepSize;
+    if constexpr (direc == FillDirection::BACKWARD) {
+      h = -1 * h;
+    }
     
     while(true) {
-      Vector3<Re<T>> step = static_cast<T>(0.5) * h * (field + m_fieldModel.getField(loc + h * field));
+      Vector3<Re<T>> step = static_cast<T>(0.5) * h * (field + m_fieldModel.getField(loc + h * field / fieldIntensity)).normalised();
       Vector3<Re<T>> newLoc = step + loc;
+      if constexpr (direc == FillDirection::BACKWARD) {
+      }
       if (validStep_(newLoc)) {
         return newLoc;
       }
@@ -466,6 +468,18 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
     else {
       fieldLine.points()[i].longitudinalInvariant = 0;
     }
+  }
+}
+
+
+template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
+requires MagneticFieldModel<FieldModel, T>
+void
+saveFieldLine(const FieldLine<T, FieldModel, Params>& fieldLine, const std::string& filename) {
+  std::ofstream outFile(filename, std::ios::binary);
+
+  if (outFile.is_open()) {
+    outFile.write(reinterpret_cast<const char*>(fieldLine.points().data()), static_cast<std::streamsize>(fieldLine.points().size() * sizeof(typename FieldLine<T, FieldModel, Params>::PointInfo)));
   }
 }
 
