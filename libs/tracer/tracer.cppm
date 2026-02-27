@@ -225,16 +225,20 @@ public:
     fill_<FillDirection::BACKWARD>(startPoint);
     
     FieldLine<T, FieldModel, Params> fieldLine;
+    std::size_t backIdx{0};
+    std::size_t frontIdx{0};
 
     if (m_backward.back().magneticIntensity < m_forward.back().magneticIntensity) {
-      trimForward_();
+      backIdx = trimForward_();
     }
     else {
-      trimBackward_();
+      frontIdx = trimBackward_();
     }
-
-    for (auto it = m_backward.rbegin(); it != m_backward.rend(); it++) {
-      fieldLine.m_points.push_back(*it); //could pop it
+    
+    if (!m_backward.empty()) {
+      for (auto it = m_backward.rbegin(); it != (m_backward.rend() - (long)backIdx); it++) {
+        fieldLine.m_points.push_back(*it); //could pop it
+      }
     }
 
     {
@@ -247,7 +251,7 @@ public:
       fieldLine.m_points.push_back(point);
     }
 
-    for (auto it = m_forward.begin(); it != m_forward.end(); it++) {
+    for (auto it = (m_forward.begin() + (long)frontIdx); it != m_forward.end(); it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
 
@@ -371,8 +375,8 @@ private:
     m_forward.resize(0);
     m_backward.resize(0);
   }
-
-  void
+  
+  [[nodiscard]] std::size_t 
   trimForward_(void) {
     nanoTesla<T> targetIntensity = m_backward.back().magneticIntensity;
     FieldLinePoint prevPoint = m_forward.back();
@@ -381,19 +385,32 @@ private:
     while(targetIntensity < m_forward.back().magneticIntensity) {
       prevPoint = m_forward.back();
       m_forward.pop_back();
+      if (m_forward.empty()) {
+        break;
+      }
     }
-
-    FieldLinePoint res = {
-      .loc = (targetIntensity - m_forward.back().magneticIntensity) /
-        (prevPoint.magneticIntensity - m_forward.back().magneticIntensity) *
-        (m_forward.back().loc - prevPoint.loc) +
-        m_forward.back().loc,
-      .magneticIntensity = targetIntensity
-    };
-    m_forward.push_back(res);
+  
+    if (m_forward.empty()) {
+      std::size_t backIdx = 0;
+      while(m_backward[backIdx].magneticIntensity < targetIntensity) {
+        backIdx++;
+      }
+      return backIdx;
+    }
+    else {
+      FieldLinePoint res = {
+        .loc = (targetIntensity - m_forward.back().magneticIntensity) /
+          (prevPoint.magneticIntensity - m_forward.back().magneticIntensity) *
+          (m_forward.back().loc - prevPoint.loc) +
+          m_forward.back().loc,
+        .magneticIntensity = targetIntensity
+      };
+      m_forward.push_back(res);
+      return 0;
+    }
   }
 
-  void
+  [[nodiscard]] std::size_t
   trimBackward_(void) {
     nanoTesla<T> targetIntensity = m_forward.back().magneticIntensity;
     FieldLinePoint prevPoint = m_backward.back();
@@ -402,16 +419,30 @@ private:
     while(targetIntensity < m_backward.back().magneticIntensity) {
       prevPoint = m_backward.back();
       m_backward.pop_back();
+      if (m_backward.empty()) {
+        break;
+      }
     }
 
-    FieldLinePoint res = {
-      .loc = (targetIntensity - m_backward.back().magneticIntensity) /
-        (prevPoint.magneticIntensity - m_backward.back().magneticIntensity) *
-        (m_backward.back().loc - prevPoint.loc) +
-        m_backward.back().loc,
-      .magneticIntensity = targetIntensity
-    };
-    m_backward.push_back(res);
+    if (m_backward.empty()) {
+      std::size_t frontIdx = 0;
+      while(m_forward[frontIdx].magneticIntensity < targetIntensity) {
+        frontIdx++;
+      }
+
+      return frontIdx;
+    }
+    else {
+      FieldLinePoint res = {
+        .loc = (targetIntensity - m_backward.back().magneticIntensity) /
+          (prevPoint.magneticIntensity - m_backward.back().magneticIntensity) *
+          (m_backward.back().loc - prevPoint.loc) +
+          m_backward.back().loc,
+        .magneticIntensity = targetIntensity
+      };
+      m_backward.push_back(res);
+      return 0;
+    }
   }
 };
 
