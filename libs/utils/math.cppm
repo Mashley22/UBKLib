@@ -12,6 +12,8 @@ export module UBKLib.utils:math;
 
 import :check;
 
+#define PI 3.14159
+
 export namespace ubk {
 
 [[nodiscard]] constexpr std::size_t
@@ -252,6 +254,9 @@ public:
     }
     else {
       Base::phi = acos(cartesian.x / (Base::r * sin(Base::theta)));
+      if (cartesian.y < 0) {
+        Base::phi = 2 * PI - Base::phi;
+      }
     }
   }
 };
