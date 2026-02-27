@@ -437,6 +437,41 @@ public:
            closureCurrentField(coords));
   }
 
+  [[nodiscard]] constexpr T& 
+  dipole_tilt(void) UBK_NOEXCEPT {
+    return m_dipole_tilt;
+  }
+
+  [[nodiscard]] constexpr const T&
+  dipole_tilt(void) const UBK_NOEXCEPT {
+    return m_dipole_tilt;
+  }
+
+  [[nodiscard]] constexpr T& 
+  time(void) UBK_NOEXCEPT {
+    return m_time;
+  }
+
+  [[nodiscard]] constexpr const T&
+  time(void) const UBK_NOEXCEPT {
+    return m_time;
+  }
+
+  [[nodiscard]] constexpr int&
+  iop(void) UBK_NOEXCEPT {
+    return m_iop;
+  }
+
+  [[nodiscard]] constexpr const int&
+  iop(void) const UBK_NOEXCEPT {
+    return m_iop;
+  }
+
+  constexpr Ts89(void) UBK_NOEXCEPT = default;
+
+  constexpr Ts89(int iop, double time, T dipole_tilt) UBK_NOEXCEPT 
+    : m_iop(iop), m_time(time), m_dipole_tilt(dipole_tilt) {}
+
 private:
   int m_iop{0};
   double m_time{0};
