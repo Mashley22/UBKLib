@@ -24,7 +24,8 @@ The build directory provides an easy run bash script to build unit tests and sam
 It will also attempt to generate compile_commands.json if clang is available, also
 prefferring to use clang if available.
 
-The use of O3 and lto should be stable. No testing has
+The use of O3 and lto should be stable, no-math-errno is strongly recommended, 
+offering around a 10x speedup on the igrf13 model specifically. No testing has 
 been done using fast-math.
 
 # Dependencies
