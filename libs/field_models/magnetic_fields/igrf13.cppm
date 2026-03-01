@@ -963,20 +963,20 @@ public:
   };
 
   void
-  init(std::size_t year = 1950, std::size_t month = 1, std::size_t day = 1) {
-    check(year >= Data::START_YEAR && year <= Data::END_YEAR);
+  init(const Time& time) {
+    check(time.year >= Data::START_YEAR && time.year <= Data::END_YEAR);
     
-    if (year >= Data::LAST_DEFINED_YEAR) {
-      postLastDefinedYearInit(year, month, day);
+    if (time.year >= Data::LAST_DEFINED_YEAR) {
+      postLastDefinedYearInit(time.year, time.month, time.day);
       return;
     }
       
-    std::size_t interp_start_year = static_cast<std::size_t>((year - Data::START_YEAR) / Data::TIME_GAP) * Data::TIME_GAP + Data::START_YEAR;
+    std::size_t interp_start_year = static_cast<std::size_t>((time.year - Data::START_YEAR) / Data::TIME_GAP) * Data::TIME_GAP + Data::START_YEAR;
 
-    T interp_years = static_cast<T>(year) + static_cast<T>(m_dateToDOY(year, month, day) - 1) / Data::DAYS_PER_YEAR_AVG - static_cast<T>(interp_start_year);
+    T interp_years = static_cast<T>(time.year) + static_cast<T>(m_dateToDOY(time.year, time.month, time.day) - 1) / Data::DAYS_PER_YEAR_AVG - static_cast<T>(interp_start_year);
     T interp_frac = interp_years / Data::TIME_GAP;
 
-    std::size_t startIdx = (year - Data::START_YEAR) / Data::TIME_GAP;
+    std::size_t startIdx = (time.year - Data::START_YEAR) / Data::TIME_GAP;
     std::size_t endIdx = startIdx + 1;
 
     for (std::size_t i = 0; i < Data::COEFF_SIZE; i++) {

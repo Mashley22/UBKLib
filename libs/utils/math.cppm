@@ -11,6 +11,7 @@ module;
 export module UBKLib.utils:math;
 
 import :check;
+import :units;
 
 #define PI 3.14159
 
@@ -66,15 +67,6 @@ pow(T val, std::size_t exponent) {
   }
   return retVal;
 }
-
-template<std::floating_point T>
-using Re = T;
-
-template<std::floating_point T>
-using kV = T;
-
-template<std::floating_point T>
-using nanoTesla = T;
 
 template<std::floating_point T>
 struct Vector3 {

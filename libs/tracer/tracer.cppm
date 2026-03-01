@@ -18,7 +18,7 @@ import UBKLib.utils;
 import UBKLib.field_models;
 
 template<std::floating_point T>
-[[nodiscard]] static constexpr bool // used in constexpr function, cannot have internal linkage
+[[nodiscard]] static constexpr bool
 oppositeSigns(T a, T b) {
   return (a * b) <= 0;
 }
@@ -60,16 +60,6 @@ struct FieldLineParams {
   }
 };
 
-// here to make field model stuff simpler
-template<std::floating_point T, class FieldModel>
-requires MagneticFieldModel<FieldModel, T>
-[[nodiscard]] T
-integrationStep(PointsPair<T> points, const FieldModel& field, nanoTesla<T> mirrorPointMagneticIntensity) {
-  nanoTesla<T> localMagneticIntensity = field.getField(points.begin).amp();
-  T distSquared = points.diff().ampSquared();
-  return std::sqrt((localMagneticIntensity - mirrorPointMagneticIntensity) * distSquared);
-}
-
 template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLineGenerator;
@@ -84,7 +74,6 @@ public:
     Vector3<nanoTesla<T>> magneticField{};
     T magneticIntensity{};
     T electricPotential{};
-
   };
 
   struct PointInfo {
@@ -236,7 +225,9 @@ public:
     }
     
     if (!m_backward.empty()) {
-      for (auto it = m_backward.rbegin(); it != (m_backward.rend() - (long)backIdx); it++) {
+      for (auto it = m_backward.rbegin();
+      it != std::next(m_backward.rend(), -1 * static_cast<std::ptrdiff_t>(backIdx));
+      it++) {
         fieldLine.m_points.push_back(*it); //could pop it
       }
     }
@@ -251,7 +242,9 @@ public:
       fieldLine.m_points.push_back(point);
     }
 
-    for (auto it = (m_forward.begin() + (long)frontIdx); it != m_forward.end(); it++) {
+    for (auto it = std::next(m_forward.begin(), static_cast<std::ptrdiff_t>(frontIdx));
+    it != m_forward.end();
+    it++) {
       fieldLine.m_points.push_back(*it); //could pop it
     }
 
@@ -375,8 +368,14 @@ private:
     m_forward.resize(0);
     m_backward.resize(0);
   }
-  
-  [[nodiscard]] std::size_t 
+    
+  /**
+   *@brief pops off elements of the m_forward vector until the end points have the same
+   *       magnetic intensity, may start trimming from the front of m_backward
+   *
+   *@returns how many elements off the front of the m_backward to trim off
+  */
+  [[nodiscard]] std::size_t
   trimForward_(void) {
     nanoTesla<T> targetIntensity = m_backward.back().magneticIntensity;
     FieldLinePoint prevPoint = m_forward.back();
@@ -409,7 +408,10 @@ private:
       return 0;
     }
   }
-
+  
+  /**
+   *@brief 
+  */
   [[nodiscard]] std::size_t
   trimBackward_(void) {
     nanoTesla<T> targetIntensity = m_forward.back().magneticIntensity;

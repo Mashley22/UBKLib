@@ -447,13 +447,13 @@ public:
     return m_dipole_tilt;
   }
 
-  [[nodiscard]] constexpr T& 
-  time(void) UBK_NOEXCEPT {
-    return m_time;
+  void
+  setTime(const Time& time) UBK_NOEXCEPT {
+    m_time = static_cast<double>(timeToEs(time));
   }
 
   [[nodiscard]] constexpr const T&
-  time(void) const UBK_NOEXCEPT {
+  es(void) const UBK_NOEXCEPT {
     return m_time;
   }
 
