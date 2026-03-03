@@ -159,39 +159,86 @@ public:
 
   [[nodiscard]] constexpr UBKInfos
   getMinima(void) {
-    nanoTesla<T> min = m_points[0].longitudinalInvariant;
+    nanoTesla<T> minIntensity = m_points[0].magneticIntensity;
     for (std::size_t i = 1; i < m_points.size() - 1; i++) {
-      if (m_points[i].longitudinalInvariant == 0) {
-        return m_points[i];     
-      }
 
-      if (min < m_points[i].longitudinalInvariant) {
-        PointInfo secondPoint;
-        if (m_points[i + 1].magneticIntensity < m_points[i - 1].magneticIntensity) {
-          secondPoint = m_points[i + 1];
+      if (minIntensity < m_points[i].magneticIntensity) {
+        
+        // Note that we can ignore the determinant = 0 check;
+        auto invert3x3 = [](const T m[3][3]) {
+          std::array<std::array<T, 3>, 3> inv;
+          T det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+                  m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                  m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+          T invDet = 1.0 / det;
+
+          inv[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * invDet;
+          inv[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * invDet;
+          inv[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * invDet;
+
+          inv[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * invDet;
+          inv[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * invDet;
+          inv[1][2] = (m[1][0] * m[0][2] - m[0][0] * m[1][2]) * invDet;
+
+          inv[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * invDet;
+          inv[2][1] = (m[2][0] * m[0][1] - m[0][0] * m[2][1]) * invDet;
+          inv[2][2] = (m[0][0] * m[1][1] - m[1][0] * m[0][1]) * invDet;
+
+          return inv;
+        };
+
+        auto getQuadraticCoefficients = [&](T s_forward, T s_backward, const std::array<T, 3>& B_vals) {
+          std::array<T, 3> coeffs;
+          T forwardMat[3][3] = {
+            {pow(s_backward, 2), s_backward, 1},
+            {0, 0, 1},
+            {pow(s_forward, 2), s_forward, 1}
+          };
+
+          std::array<std::array<T, 3>, 3> inverseMat = invert3x3(forwardMat);
+
+          for (std::size_t i = 0; i < 3; i++) {
+            coeffs[i] = 0;
+            for (std::size_t j = 0; j < 3; j++) {
+              coeffs[i] += inverseMat[i][j] * B_vals[i];
+            }
+          }
+
+          return coeffs;
+
+        };
+
+        T s_backward = -1 * (m_points[i].loc - m_points[i - 1].loc).amp();
+        T s_forward = (m_points[i].loc - m_points[i + 1].loc).amp();
+
+        std::array<T, 3> quadraticCoeffs =
+          getQuadraticCoefficients(s_forward, s_backward, 
+                                   std::array<T, 3>{
+                                   m_points[i - 1].magneticIntensity,
+                                   m_points[i].magneticIntensity,
+                                   m_points[i + 1].magneticIntensity
+                                   });
+
+        T s_min = -1 * quadraticCoeffs[1] / (2 * quadraticCoeffs[0]);
+        
+        Vector3<Re<T>> secondPointLoc;
+        if (s_min < 0) {
+          secondPointLoc = m_points[i - 1].loc;
         }
         else {
-          secondPoint = m_points[i - 1];
+          secondPointLoc = m_points[i + 1].loc;
         }
 
-        if (secondPoint.longitudinalInvariant == m_points[i].longitudinalInvariant) {
-          return m_points[i];
-        }
+        Vector3<Re<T>> deltaLoc = secondPointLoc - m_points[i].loc;
+        Vector3<Re<T>> loc_min = m_points[i].loc - deltaLoc * s_min / deltaLoc.amp();
 
-        T scale = m_points[i].longitudinalInvariant /
-          (secondPoint.longitudinalInvariant - m_points[i].longitudinalInvariant);
-        
-        UBKInfos retVal;
-        Vector3<Re<T>> deltaLoc = secondPoint.loc - m_points[i].loc;
-        Vector3<nanoTesla<T>> deltaField = secondPoint.magneticField - m_points[i].magneticField;
-        
-        retVal.loc = m_points[i].loc + deltaLoc * scale;
-        retVal.magneticField = m_points[i].magneticField + deltaField * scale;
-        retVal.magneticIntensity = retVal.magneticField.amp();
-        return retVal;
+        return {
+          .loc = loc_min,
+        };
       }
       else {
-        min = m_points[i].longitudinalInvariant;
+        minIntensity = m_points[i].magneticIntensity;
       }
     }
     throw NoMinimaFound{};
@@ -254,6 +301,11 @@ public:
   void
   assignModel(const FieldModel& fieldModel) {
     m_fieldModel = fieldModel;
+  }
+
+  [[nodiscard]] const FieldModel& 
+  fieldModel(void) const UBK_NOEXCEPT {
+    return m_fieldModel;
   }
 
 private:

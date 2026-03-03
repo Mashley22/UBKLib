@@ -39,8 +39,6 @@ int main() {
       continue;
     }
 
-
-    calculateLongitudinalInvariants(fieldLine);
     auto point = fieldLine.getMinima();
 
     std::cout << vec3ToStr(point.loc) << '\n';

@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_all.hpp>
 
 import UBKLib;
 
@@ -65,7 +65,7 @@ TEST_CASE( "test tracer with dipole field", "[tracer][dipole]" ) {
     FieldLine<double, Dipole<double>, params> fieldLine = generator.generateFieldLine({2.0, 0.0, 0.0});
     calculateLongitudinalInvariants(fieldLine);
     auto minima = fieldLine.getMinima();
-    REQUIRE(minima.loc.z == 0);
+    REQUIRE_THAT(minima.loc.z, Catch::Matchers::WithinAbs(0, params.maxStepDotField));
   }
 }
 

@@ -241,15 +241,7 @@ public:
     
     Base::theta = acos(cartesian.z / Base::r);
     
-    if (cartesian.x == 0 && cartesian.y == 0) {
-      Base::phi = 0;
-    }
-    else {
-      Base::phi = acos(cartesian.x / (Base::r * sin(Base::theta)));
-      if (cartesian.y < 0) {
-        Base::phi = 2 * PI - Base::phi;
-      }
-    }
+    Base::phi = std::atan2(cartesian.y, cartesian.x);
   }
 };
 
