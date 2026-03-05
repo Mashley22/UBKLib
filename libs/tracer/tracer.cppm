@@ -393,8 +393,8 @@ private:
       }
     };
 
-    auto assignPoint = [&]() {
-      point.loc = nextLoc.value();
+    auto assignPoint = [&](const std::optional<Vector3<Re<T>>>& next) {
+      point.loc = next.value();
       point.magneticField = m_fieldModel.getField(point.loc);
       point.magneticIntensity = point.magneticField.amp();
       
@@ -403,7 +403,7 @@ private:
       buf_<direc>().push_back(point);
     };
 
-    assignPoint();
+    assignPoint(nextLoc);
     
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
       nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
@@ -411,7 +411,7 @@ private:
         return;
       }
       
-      assignPoint();
+      assignPoint(nextLoc);
     }
   }
 
