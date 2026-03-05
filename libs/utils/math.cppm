@@ -13,9 +13,10 @@ export module UBKLib.utils:math;
 import :check;
 import :units;
 
-#define PI 3.14159
-
 export namespace ubk {
+
+template<std::floating_point T>
+constexpr T PI = static_cast<T>(3.1415926535);
 
 [[nodiscard]] constexpr std::size_t
 factorial(std::size_t val) UBK_NOEXCEPT {
