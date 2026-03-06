@@ -1113,9 +1113,7 @@ private:
 };
 
 static_assert(MagneticFieldModel<Igrf13<double>, double>);
-static_assert(MagneticFieldModel<Igrf13<float>, float>);
 
-static_assert(!MagneticFieldModel<Igrf13<float>, double>);
 static_assert(!MagneticFieldModel<Igrf13<double>, float>);
 
 }

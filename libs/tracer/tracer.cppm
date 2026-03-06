@@ -360,7 +360,7 @@ private:
     std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
 
     if (!nextLoc.has_value()) {
-      std::runtime_error("Couldn't even take one step!");
+      throw std::runtime_error("Couldn't even take one step!");
     }
 
     auto checkNotBifercating = [&](nanoTesla<T> newIntensity) {

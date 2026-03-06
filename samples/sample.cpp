@@ -7,6 +7,8 @@ import UBKLib;
 
 using T = double;
 
+constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 1000;
+
 struct Field {
   ubk::Igrf13<T> igrf13;
   ubk::Ts89<T> ts89;
@@ -30,7 +32,7 @@ int main() {
   
   ubk::Time time{};
   Field field;
-  field.igrf13.init(time);
+  field.igrf13.setTime(time);
   field.ts89.dipole_tilt() = field.igrf13.dipole_tilt();
   field.ts89.setTime(time);
 
@@ -54,17 +56,19 @@ int main() {
       (void)e;
       bifercatingFieldLines++;
       continue;
+    } catch(std::runtime_error& e) {
+      (void)e;
+      continue;
     }
 
-    if (fieldLine.points()[0].loc.ampSquared() < 1.1 ||
-        fieldLine.points().back().loc.ampSquared() < 1.1) {
+    if (fieldLine.points().size() < MIN_FIELD_LINE_POINT_COUNT) {
       shortFieldLines++;
       continue;
     }
 
     calculateLongitudinalInvariants(fieldLine);
     
-    std::array<ubk::FieldLine<T, Field, params>::UBKInfos, 2> points;
+    std::array<ubk::FieldLine<T, Field, params>::PointInfo, 2> points;
   
     if (fieldLine.maxLongitudinalInvariant() < K_VAL) continue;
     points = fieldLine.getPointsWithK(K_VAL);

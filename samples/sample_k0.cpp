@@ -6,6 +6,8 @@ import UBKLib;
 
 using T = double;
 
+constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 1000;
+
 constexpr ubk::FieldLineParams<T> params = {
   .innerLim = 1.05,
   .outterLim = 15.0,
@@ -32,10 +34,12 @@ int main() {
     } catch(ubk::BifercatingFieldLine& e) {
       (void)e;
       continue;
+    } catch(std::runtime_error& e) {
+      (void)e;
+      continue;
     }
 
-    if (fieldLine.points()[0].loc.ampSquared() < 1.1 ||
-        fieldLine.points().back().loc.ampSquared() < 1.1) {
+    if (fieldLine.points().size() < MIN_FIELD_LINE_POINT_COUNT) {
       continue;
     }
 

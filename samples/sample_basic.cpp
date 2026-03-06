@@ -4,6 +4,8 @@ import UBKLib;
 
 using T = double;
 
+constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 1000;
+
 constexpr ubk::FieldLineParams<T> params = {
   .innerLim = 1.05,
   .outterLim = 15.0,
@@ -29,10 +31,13 @@ int main() {
     (void)e;
     std::cout << "Bifercating field line!";
     return 0;
+  } catch(std::runtime_error& e) {
+    (void)e;
+    std::cout << "Couldn't even take one step!";
+    return 0;
   }
 
-  if (fieldLine.points()[0].loc.ampSquared() < 1.1 ||
-      fieldLine.points().back().loc.ampSquared() < 1.1) {
+  if (fieldLine.points().size() < MIN_FIELD_LINE_POINT_COUNT) {
     std::cout << "Field line did not trace the whole length!";
     return 0;
   }
