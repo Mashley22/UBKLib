@@ -68,27 +68,11 @@ template<std::floating_point T, class FieldModel, FieldLineParams<T> Params>
 requires MagneticFieldModel<FieldModel, T>
 class FieldLine {
 public:
-  
-  struct UBKInfos {
-    Vector3<Re<T>> loc{};
-    Vector3<nanoTesla<T>> magneticField{};
-    T magneticIntensity{};
-    T electricPotential{};
-  };
 
   struct PointInfo {
     Vector3<Re<T>> loc{};
-    Vector3<nanoTesla<T>> magneticField{};
-    T magneticIntensity{};
+    nanoTesla<T> magneticIntensity{};
     T longitudinalInvariant{};
-
-    operator UBKInfos() const UBK_NOEXCEPT {
-      return {
-        .loc = loc,
-        .magneticField = magneticField,
-        .magneticIntensity = magneticIntensity
-      };
-    };
   };
 
   friend class FieldLineGenerator<T, FieldModel, Params>;
@@ -114,10 +98,10 @@ public:
    *@note undefined if k_val > max_k along the field line
    *
   */
-  [[nodiscard]] constexpr std::array<UBKInfos, 2>
+  [[nodiscard]] constexpr std::array<PointInfo, 2>
   getPointsWithK(T k_val) {  
     check(k_val != 0);
-    std::array<UBKInfos, 2> retVal;
+    std::array<PointInfo, 2> retVal;
     std::size_t which = 0;
 
     for (std::size_t i = 0; i < m_points.size() - 1; i++) {
@@ -134,8 +118,8 @@ public:
       
       if (oppositeSigns<T>(deltaK_1, deltaK_2)) {
         Vector3<Re<T>> deltaLoc = m_points[i + 1].loc - m_points[i].loc;
-        Vector3<nanoTesla<T>> deltaField = m_points[i + 1].magneticField - m_points[i].magneticField;
         T deltaK = m_points[i + 1].longitudinalInvariant - m_points[i].longitudinalInvariant;
+        nanoTesla<T> deltaMagneticIntensity = m_points[i + 1].magneticIntensity - m_points[i].magneticIntensity;
 
         if (deltaK == 0) {
           retVal[which] = m_points[i];
@@ -144,8 +128,7 @@ public:
           T scale = deltaK_1 / deltaK;
 
           retVal[which].loc = deltaLoc * scale + m_points[i].loc;
-          retVal[which].magneticField = deltaField * scale + m_points[i].magneticField;
-          retVal[which].magneticIntensity = retVal[which].magneticField.amp();
+          retVal[which].magneticIntensity = deltaMagneticIntensity * scale + m_points[i].magneticIntensity;
         }
 
         if (which == 1) {
@@ -157,7 +140,7 @@ public:
     std::unreachable();
   }
 
-  [[nodiscard]] constexpr UBKInfos
+  [[nodiscard]] constexpr PointInfo
   getMinima(void) {
     nanoTesla<T> minIntensity = m_points[0].magneticIntensity;
     for (std::size_t i = 1; i < m_points.size() - 1; i++) {
@@ -282,9 +265,8 @@ public:
     {
       FieldLinePoint point = {
         .loc = startPoint,
-        .magneticField = m_fieldModel.getField(startPoint)
+        .magneticIntensity = m_fieldModel.getField(startPoint).amp()
       };
-      point.magneticIntensity = point.magneticField.amp();
 
       fieldLine.m_points.push_back(point);
     }
@@ -366,16 +348,16 @@ private:
   template<FillDirection direc>
   void 
   fill_(Vector3<Re<T>> starting) {
+    auto field = m_fieldModel.getField(starting);
     FieldLinePoint point = {
       .loc = starting,
-      .magneticField = m_fieldModel.getField(point.loc),
+      .magneticIntensity = field.amp(),
     };
-    point.magneticIntensity = point.magneticField.amp();
 
     nanoTesla<T> minMagneticIntensity = point.magneticIntensity;
     bool foundMinima = false;
 
-    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
+    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
 
     if (!nextLoc.has_value()) {
       std::runtime_error("Couldn't even take one step!");
@@ -395,8 +377,8 @@ private:
 
     auto assignPoint = [&](const std::optional<Vector3<Re<T>>>& next) {
       point.loc = next.value();
-      point.magneticField = m_fieldModel.getField(point.loc);
-      point.magneticIntensity = point.magneticField.amp();
+      field = m_fieldModel.getField(point.loc);
+      point.magneticIntensity = field.amp();
       
       checkNotBifercating(point.magneticIntensity);
 
@@ -406,7 +388,7 @@ private:
     assignPoint(nextLoc);
     
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
-      nextLoc = takeStep_<direc>(point.loc, point.magneticField, point.magneticIntensity);
+      nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
       if (!nextLoc.has_value()) {
         return;
       }
