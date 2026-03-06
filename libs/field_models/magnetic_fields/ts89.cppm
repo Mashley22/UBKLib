@@ -42,8 +42,9 @@ export namespace ubk {
 // C ordering has been used, although its constexpr so really should not be affecting performance
 // may be some llm hallucination here but oh well
 template<std::floating_point T>
-class Ts89 { 
+class Ts89 : public TimeDependentField<T> { 
 public:
+  using Base = TimeDependentField<T>;
 
   static constexpr T params[7][30] = {
     {
@@ -447,16 +448,6 @@ public:
     return m_dipole_tilt;
   }
 
-  void
-  setTime(const Time& time) UBK_NOEXCEPT {
-    m_time = static_cast<double>(timeToEs(time));
-  }
-
-  [[nodiscard]] constexpr const T&
-  es(void) const UBK_NOEXCEPT {
-    return m_time;
-  }
-
   [[nodiscard]] constexpr int&
   iop(void) UBK_NOEXCEPT {
     return m_iop;
@@ -469,12 +460,11 @@ public:
 
   constexpr Ts89(void) UBK_NOEXCEPT = default;
 
-  constexpr Ts89(int iop, double time, T dipole_tilt) UBK_NOEXCEPT 
-    : m_iop(iop), m_time(time), m_dipole_tilt(dipole_tilt) {}
+  constexpr Ts89(int iop, T dipole_tilt, const Time& time) UBK_NOEXCEPT 
+    : Base(time), m_iop(iop), m_dipole_tilt(dipole_tilt) {}
 
 private:
   int m_iop{0};
-  double m_time{0};
   T m_dipole_tilt{0};
 
   [[nodiscard]] constexpr std::span<const T>
@@ -484,12 +474,12 @@ private:
 
   [[nodiscard]] Vector3<T>
   geoToGsm(Vector3<T> val) const UBK_NOEXCEPT {
-    return m_geoToGsm(val, m_time);
+    return m_geoToGsm(val, Base::time_es());
   }
 
   [[nodiscard]] Vector3<T>
   gsmToGeo(Vector3<T> val) const UBK_NOEXCEPT {
-    return m_gsmToGeo(val, m_time);
+    return m_gsmToGeo(val, Base::time_es());
   }
 
 };

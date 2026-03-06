@@ -2,11 +2,41 @@ module;
 
 #include <concepts>
 
+#include <UBK/macros.hpp>
+
 export module UBKLib.field_models:traits;
 
 import UBKLib.utils;
 
 export namespace ubk {
+
+template<std::floating_point T>
+struct TimeDependentField {
+public:
+  TimeDependentField(void) UBK_NOEXCEPT = default;
+  TimeDependentField(const Time& time) 
+    : m_time(time), m_time_es(static_cast<T>(timeToEs(time))) {}
+
+  [[nodiscard]] T
+  time_es(void) const UBK_NOEXCEPT {
+    return m_time_es;
+  }
+
+  [[nodiscard]] const Time&
+  time(void) const UBK_NOEXCEPT {
+    return m_time;
+  }
+
+  void
+  setTime(const Time& newTime) UBK_NOEXCEPT {
+    m_time = newTime;
+    m_time_es = static_cast<T>(timeToEs(m_time));
+  }
+  
+private:
+  Time m_time;
+  T m_time_es;
+};
 
 template<typename Field, typename inFP_t = double, typename outFP_t = inFP_t>
 concept VectorField =

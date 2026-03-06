@@ -8,6 +8,7 @@ module;
 
 export module UBKLib.field_models:magnetic_fields.igrf13;
 
+import :traits;
 import UBKLib.utils;
 
 [[nodiscard]] static constexpr bool 
@@ -39,8 +40,9 @@ m_dateToDOY(std::size_t year, std::size_t month, std::size_t day) UBK_NOEXCEPT {
 export namespace ubk {
 
 template<std::floating_point T>
-class Igrf13 {
+class Igrf13 : TimeDependentField<T> {
 public:
+  using Base = TimeDependentField<T>;
 
   struct Data {
     
@@ -962,8 +964,14 @@ public:
 
   };
 
+  Igrf13(void) UBK_NOEXCEPT = default;
+  Igrf13(const Time& time) {
+    setTime(time);
+  }
+
   void
-  init(const Time& time) {
+  setTime(const Time& time) {
+    Base::setTime(time);
     check(time.year >= Data::START_YEAR && time.year <= Data::END_YEAR);
     
     if (time.year >= Data::LAST_DEFINED_YEAR) {
@@ -1103,5 +1111,11 @@ private:
     }
   }
 };
+
+static_assert(MagneticFieldModel<Igrf13<double>, double>);
+static_assert(MagneticFieldModel<Igrf13<float>, float>);
+
+static_assert(!MagneticFieldModel<Igrf13<float>, double>);
+static_assert(!MagneticFieldModel<Igrf13<double>, float>);
 
 }

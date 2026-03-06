@@ -31,4 +31,10 @@ static constexpr T TAIL_FIELD = static_cast<T>(10.0);
   T m_time{0};
 };
 
+static_assert(ElectricPotentialModel<CrossTailPotential<double>, double>);
+static_assert(ElectricPotentialModel<CrossTailPotential<float>, float>);
+
+static_assert(!ElectricPotentialModel<CrossTailPotential<float>, double>);
+static_assert(!ElectricPotentialModel<CrossTailPotential<double>, float>);
+
 }
