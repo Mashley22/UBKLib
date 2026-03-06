@@ -36,6 +36,10 @@ template<typename Field, typename fp_t = double>
 concept MagneticFieldModel = VectorField<Field, Re<fp_t>, nanoTesla<fp_t>>;
 
 template<typename Field, typename fp_t = double>
-concept ElectricPotentialModel = PotentialField<Field, Re<fp_t>, kV<fp_t>>;
+concept ElectricPotentialModel = 
+  ScalarField<Field, Re<fp_t>, kV<fp_t>> &&
+  requires(const Field model, fp_t mlt, fp_t colatitude) {
+    { model.getField(mlt, colatitude) } -> std::convertible_to<kV<fp_t>>;
+  };
 
 }
