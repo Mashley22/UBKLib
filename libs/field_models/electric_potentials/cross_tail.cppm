@@ -10,11 +10,11 @@ import UBKLib.utils;
 export namespace ubk {
 
 template<std::floating_point T>
-class CrossTailPotential {
+class CrossTailPotential : public TimeDependentField<T> {
 public:
-
-static constexpr kV<T> SURFACE_POTENTIAL = static_cast<T>(92.0); 
-static constexpr T TAIL_FIELD = static_cast<T>(10.0); 
+  using Base = TimeDependentField<T>;
+  static constexpr kV<T> SURFACE_POTENTIAL = static_cast<T>(92.0); 
+  static constexpr T TAIL_FIELD = static_cast<T>(10.0); 
 
   [[nodiscard]] kV<T>
   getField(T mlt, T theta) const {
@@ -24,8 +24,8 @@ static constexpr T TAIL_FIELD = static_cast<T>(10.0);
   }
 
   [[nodiscard]] kV<T>
-  getField(const Vector3<T> pos) const {
-    return pos();
+  getField(const Vector3<Re<T>> pos) const {
+    return getField(mltFromGeo(pos, Base::time_es()), SphericalPolar(pos).theta);
   }
 
   T m_time{0};

@@ -41,7 +41,7 @@ public:
 
   [[nodiscard]] kV<T>
   getField(const Vector3<Re<T>> pos) const {
-    return getField(mltFromGeo(pos, Base::time_es()), SphericalCoords(pos).theta);
+    return getField(mltFromGeo(pos, Base::time_es()), SphericalPolar(pos).theta);
   }
 
 private:
