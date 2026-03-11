@@ -240,8 +240,16 @@ public:
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
     clearAll_();
-    fill_<FillDirection::FORWARD>(startPoint);
-    fill_<FillDirection::BACKWARD>(startPoint);
+
+    {
+      CurrentFieldLineInfo currentFieldLineInfo = {
+        .foundMinima = false,
+        .minMagneticIntensity = m_fieldModel.getField(startPoint).amp()
+      };
+
+      trace_<FillDirection::FORWARD>(currentFieldLineInfo, startPoint);
+      trace_<FillDirection::BACKWARD>(currentFieldLineInfo, startPoint);
+    }
     
     FieldLine<T, FieldModel, Params> fieldLine;
     std::size_t backIdx{0};
@@ -295,6 +303,11 @@ private:
   std::vector<FieldLinePoint> m_backward;
   FieldModel m_fieldModel;
 
+  struct CurrentFieldLineInfo {
+    bool foundMinima = false;
+    nanoTesla<T> minMagneticIntensity;
+  };
+
   enum class FillDirection {
     FORWARD,
     BACKWARD
@@ -346,16 +359,13 @@ private:
   }
   
   template<FillDirection direc>
-  void 
-  fill_(Vector3<Re<T>> starting) {
+  void
+  trace_(CurrentFieldLineInfo& currentFieldLineInfo, Vector3<Re<T>> starting) {
     auto field = m_fieldModel.getField(starting);
     FieldLinePoint point = {
       .loc = starting,
       .magneticIntensity = field.amp(),
     };
-
-    nanoTesla<T> minMagneticIntensity = point.magneticIntensity;
-    bool foundMinima = false;
 
     std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
 
@@ -364,14 +374,14 @@ private:
     }
 
     auto checkNotBifercating = [&](nanoTesla<T> newIntensity) {
-      if (newIntensity > minMagneticIntensity) {
-        foundMinima = true;
+      if (newIntensity > currentFieldLineInfo.minMagneticIntensity) {
+        currentFieldLineInfo.foundMinima = true;
       }
       else {
-        if (foundMinima) {
+        if (currentFieldLineInfo.foundMinima) {
           throw BifercatingFieldLine{};
         }
-        minMagneticIntensity = newIntensity;
+        currentFieldLineInfo.minMagneticIntensity = newIntensity;
       }
     };
 
