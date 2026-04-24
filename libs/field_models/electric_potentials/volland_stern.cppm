@@ -1,6 +1,8 @@
 module;
 
 #include <concepts>
+#include <numbers>
+
 #include <UBK/macros.hpp>
 
 export module UBKLib.field_models:electric_potentials.volland_stern;
@@ -31,7 +33,7 @@ public:
   [[nodiscard]] kV<T>
   getField(T mlt, T theta) const {
     T sinTheta_2 = pow(sin(theta), 2);
-    return -1 * SURFACE_POTENTIAL * sinTheta_2 - E0() * sin((mlt - 12) * PI<T> / 12) / pow(sinTheta_2, 2);
+    return -1 * SURFACE_POTENTIAL * sinTheta_2 - E0() * sin((mlt - 12) * std::numbers::pi / 12) / pow(sinTheta_2, 2);
   }
 
   [[nodiscard]] constexpr T

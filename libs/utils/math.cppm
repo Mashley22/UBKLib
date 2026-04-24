@@ -15,9 +15,6 @@ import :units;
 
 export namespace ubk {
 
-template<std::floating_point T>
-constexpr T PI = static_cast<T>(3.1415926535);
-
 [[nodiscard]] constexpr std::size_t
 factorial(std::size_t val) UBK_NOEXCEPT {
   std::size_t retVal = 1;
@@ -158,7 +155,7 @@ struct Vector3 {
 
   [[nodiscard]] T
   amp(void) const UBK_NOEXCEPT {
-    return std::sqrt(ampSquared()); // in c++ 26 ...
+    return std::hypot(x, y, z);
   }
 
   [[nodiscard]] constexpr Vector3 

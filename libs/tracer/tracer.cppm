@@ -240,7 +240,6 @@ public:
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
     clearAll_();
-
     {
       CurrentFieldLineInfo currentFieldLineInfo = {
         .foundMinima = false,

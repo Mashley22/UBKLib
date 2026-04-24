@@ -3,6 +3,7 @@ module;
 #include <array>
 #include <concepts>
 #include <cmath>
+#include <numbers>
 
 #include <cxform.h>
 
@@ -16,7 +17,7 @@ export namespace ubk {
 template<std::floating_point T>
 [[nodiscard]] T
 mltFromGsm(const Vector3<Re<T>> gsm) {
-  return std::fmod((std::atan2(gsm.y, gsm.x) * 12 / PI<T>) + 12, 24);
+  return std::fmod((std::atan2(gsm.y, gsm.x) * 12 / std::numbers::pi) + 12, 24);
 }
 
 template<std::floating_point T>

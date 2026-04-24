@@ -1,6 +1,7 @@
 module;
 
 #include <concepts>
+#include <numbers>
 
 export module UBKLib.field_models:electric_potentials.cross_tail;
 
@@ -20,7 +21,7 @@ public:
   getField(T mlt, T theta) const {
     T sinTheta_2 = sin(theta);
 
-    return -1 * SURFACE_POTENTIAL * sinTheta_2 - sin((mlt - 12) * PI<T> / 12) * TAIL_FIELD / sinTheta_2;
+    return -1 * SURFACE_POTENTIAL * sinTheta_2 - sin((mlt - 12) * std::numbers::pi / 12) * TAIL_FIELD / sinTheta_2;
   }
 
   [[nodiscard]] kV<T>
