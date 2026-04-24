@@ -11,7 +11,7 @@ export module UBKLib.field_models:magnetic_fields.igrf13;
 import :traits;
 import UBKLib.utils;
 
-[[nodiscard]] static constexpr bool 
+[[nodiscard]] constexpr bool 
 m_isLeapYear(std::size_t year) UBK_NOEXCEPT {
   return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }

@@ -41,6 +41,7 @@ set(PEDANTIC_COMPILE_OPTIONS
   -Wstrict-overflow=5 
   -Wswitch-enum 
   -Wunreachable-code
+  -Wno-c2y-extensions
 )
 
 add_subdirectory(extern/cxform2)
