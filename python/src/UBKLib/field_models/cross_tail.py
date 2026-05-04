@@ -31,6 +31,6 @@ def cross_tail_potential(
         raise ValueError("Coordinates must supply a radial distance larger than 1 Re")
     
     corotation = - SURFACE_POTENTIAL / r
-    convection = - CROSS_TAIL_STRENGTH * y
+    convection = CROSS_TAIL_STRENGTH * y
     
     return corotation + convection

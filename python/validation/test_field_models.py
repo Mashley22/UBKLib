@@ -12,14 +12,14 @@ class TestCrossTailPotential:
         # r=1.0. Corotation: -94.2/1. Convection: 0. Total: -94.2
         (1.0, 0.0, -94.2),         
         
-        # r=1.0. Corotation: -94.2/1. Convection: -10(1). Total: -104.2
-        (0.0, 1.0, -104.2),        
+        # r=1.0. Corotation: -94.2/1. Convection: 10(1). Total: -84.2
+        (0.0, 1.0, -84.2),        
         
-        # r=1.0. Corotation: -94.2/1. Convection: -10(-1). Total: -84.2
-        (0.0, -1.0, -84.2),        
+        # r=1.0. Corotation: -94.2/1. Convection: -10(-1). Total: -104.2
+        (0.0, -1.0, -104.2),        
         
-        # r=5.0. Corotation: -94.2/5 = -18.84. Convection: -10(4) = -40. Total: -58.84
-        (3.0, 4.0, -58.84),        
+        # r=5.0. Corotation: -94.2/5 = -18.84. Convection: 10(4) = 40. Total: 21.16
+        (3.0, 4.0, 21.16),        
     ])
     def test_scalar_coordinates(self, x, y, expected):
         result = cross_tail_potential(x, y)
@@ -28,7 +28,7 @@ class TestCrossTailPotential:
     def test_numpy_arrays(self):
         x_arr = np.array([1.0, 0.0, 3.0])
         y_arr = np.array([0.0, 1.0, 4.0])
-        expected = np.array([-94.2, -104.2, -58.84])
+        expected = np.array([-94.2, -84.2, 21.16])
         
         result = cross_tail_potential(x_arr, y_arr)
         
