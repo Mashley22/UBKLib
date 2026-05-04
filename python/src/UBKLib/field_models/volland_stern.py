@@ -10,6 +10,8 @@ def volland_stern_potential(
     x: Union[float, np.ndarray], 
     y: Union[float, np.ndarray], 
     kp: float = 3.0, 
+    surface_potential: float = SURFACE_POTENTIAL,
+    convection_numerator: float = CONVECTION_NUMERATOR
 ) -> Union[float, np.ndarray]:
     """
     Calculates the Volland Stern electric potential along a field line with equitorial

@@ -7,6 +7,8 @@ SURFACE_POTENTIAL = 94.2
 def cross_tail_potential(
     x: Union[float, np.ndarray], 
     y: Union[float, np.ndarray], 
+    cross_tail_strength: float = CROSS_TAIL_STRENGTH,
+    surface_potential: float = SURFACE_POTENTIAL
 ) -> Union[float, np.ndarray]:
     """
     Calculates the equatorial electric potential for a uniform cross-tail field 
