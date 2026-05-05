@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .types import W0ContourFunction, Vectorizable, UBTrajectory, UBCoord
+from .field_models import dipole
 
 __MINIZER_OPTIONS = {
     'xatol': 1e-16,    
@@ -49,7 +50,7 @@ def continuous_lcds_ub_trajectory(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         gradient: float,
-        B_bounds: tuple[float, float] = (40, 30000)
+        B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 **3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
     ) -> UBTrajectory:
     """Calculates the the LCDS trajectory for a particle with a given gradient.
     
@@ -57,7 +58,8 @@ def continuous_lcds_ub_trajectory(
         lower_contour: a function that describes the lower W=0 contour as a function U(B)
         upper_contour: same as lower_contour but for the upper W=0 contour
         gradient(kV/nT): the value of the -mu/q for the given particle
-        B_bounds(nT): the bounds for the value of B to search within
+        B_bounds(nT): the bounds for the value of B to search within, by default chooses field delta as the equatorial strength
+                      at distances 15 to 1.05 Re
     Raises:
         RuntimeError: if the scipy minizer fails
 
