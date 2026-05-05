@@ -20,8 +20,3 @@ W0ContourFunction = Callable[
     ],
     Vectorizable
 ]
-
-@dataclass
-class UBCoord:
-    B: float
-    U: float
