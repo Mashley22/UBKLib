@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from skimage import measure
 
-from .traits import PotentialFunction
+from .types import PotentialFunction
 
 def __generate_potential_image(
         potential : PotentialFunction,

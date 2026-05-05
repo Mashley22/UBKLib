@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Union
+from ..types import Vectorizable
 
 SURFACE_POTENTIAL = 94.2
 CONVECTION_NUMERATOR = 0.045
@@ -7,12 +7,12 @@ CONVECTION_KP_LINEAR_COEFF = -0.0159
 CONVECTION_KP_QUADRATIC_COEFF = 0.0093
 
 def volland_stern_potential(
-    x: Union[float, np.ndarray], 
-    y: Union[float, np.ndarray], 
-    kp: float = 3.0, 
-    surface_potential: float = SURFACE_POTENTIAL,
-    convection_numerator: float = CONVECTION_NUMERATOR
-) -> Union[float, np.ndarray]:
+        x: Vectorizable, 
+        y: Vectorizable, 
+        kp: float = 3.0, 
+        surface_potential: float = SURFACE_POTENTIAL,
+        convection_numerator: float = CONVECTION_NUMERATOR
+    ) -> Vectorizable:
     """
     Calculates the Volland Stern electric potential along a field line with equitorial
     crossing at (x,  y)

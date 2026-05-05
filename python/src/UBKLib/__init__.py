@@ -4,4 +4,4 @@ from .field_models import (
 )
 
 from .equipotentials import generate_equipotentials
-from .trajectory import continuousLCDSUBTrajectory, UBTrajectory, UBCoord
+from .trajectory import continuous_lcds_ub_trajectory

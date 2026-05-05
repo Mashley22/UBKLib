@@ -3,9 +3,8 @@ import pytest
 import sys
 import os
 
-from UBKLib import continuousLCDSUBTrajectory, UBTrajectory, UBCoord
-from UBKLib.traits import W0ContourFunction
-
+from UBKLib import continuous_lcds_ub_trajectory
+from UBKLib.types import W0ContourFunction, UBTrajectory, UBCoord
 
 # -------------------------------------------------------------------
 # Real Contour Functions for Testing
@@ -104,13 +103,13 @@ def tight_bounds():
 # Basic Functionality Tests
 # -------------------------------------------------------------------
 
-class TestContinuousLCDSUBTrajectoryBasic:
+class TestContinuous_lcds_ub_trajectoryBasic:
     """Basic functional tests with linear contours"""
     
     def test_returns_correct_type(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Should return a UBTrajectory instance"""
         gradient = 1.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -121,7 +120,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_gradient_set_correctly(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Trajectory should store the input gradient"""
         gradient = 1.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -132,7 +131,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_positive_gradient_less_than_contour_slope(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """When gradient < contour slope, line should intersect at lower bound"""
         gradient = 1.0  # Less than contour slope of 2.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -151,7 +150,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_positive_gradient_greater_than_contour_slope(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """When gradient > contour slope, line should intersect at upper bound"""
         gradient = 3.0  # Greater than contour slope of 2.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -167,7 +166,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
         The maximum intercept that still touches both contours will be such that
         the line passes through the lower contour at the optimal B."""
         gradient = 2.0  # Same as contour slope
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower,
             simple_linear_upper,
             gradient,
@@ -202,7 +201,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_zero_gradient(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Test with zero gradient (horizontal line)"""
         gradient = 0.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -220,7 +219,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_negative_gradient(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Test with negative gradient"""
         gradient = -0.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -234,7 +233,7 @@ class TestContinuousLCDSUBTrajectoryBasic:
     def test_very_negative_gradient(self, steep_linear_lower, steep_linear_upper, standard_bounds):
         """Test with very negative gradient"""
         gradient = -10.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             steep_linear_lower, 
             steep_linear_upper, 
             gradient, 
@@ -256,7 +255,7 @@ class TestNonlinearContours:
     def test_quadratic_contours_positive_gradient(self, quadratic_lower, quadratic_upper, wide_bounds):
         """Test with quadratic contours and positive gradient"""
         gradient = 2.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             quadratic_lower, 
             quadratic_upper, 
             gradient, 
@@ -274,7 +273,7 @@ class TestNonlinearContours:
     def test_quadratic_contours_negative_gradient(self, quadratic_lower, quadratic_upper, wide_bounds):
         """Test with quadratic contours and negative gradient"""
         gradient = -0.1
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             quadratic_lower, 
             quadratic_upper, 
             gradient, 
@@ -288,7 +287,7 @@ class TestNonlinearContours:
     def test_quadratic_contours_high_gradient(self, quadratic_lower, quadratic_upper, wide_bounds):
         """Test with quadratic contours and high gradient"""
         gradient = 10.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             quadratic_lower, 
             quadratic_upper, 
             gradient, 
@@ -303,7 +302,7 @@ class TestNonlinearContours:
         """Test reciprocal contours don't crash due to 1/B^(1/3) singularity"""
         gradient = 0.5
         # This should not raise even though contour has 1/B^(1/3)
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             reciprocal_lower, 
             reciprocal_upper, 
             gradient, 
@@ -322,7 +321,7 @@ class TestNonlinearContours:
         
         # This might fail due to numerical issues - we're testing robustness
         try:
-            result = continuousLCDSUBTrajectory(
+            result = continuous_lcds_ub_trajectory(
                 reciprocal_lower, 
                 reciprocal_upper, 
                 gradient, 
@@ -348,7 +347,7 @@ class TestEdgeCases:
         gradient = 1.5
         tight_b = (5000.0, 5001.0)  # Only 1 nT range
         
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -364,7 +363,7 @@ class TestEdgeCases:
         gradient = 1.0
         large_b = (1.0, 100000.0)
         
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -378,7 +377,7 @@ class TestEdgeCases:
     def test_very_small_gradient(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Test with gradient near zero"""
         gradient = 1e-10
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -391,7 +390,7 @@ class TestEdgeCases:
     def test_very_large_gradient(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Test with very large gradient"""
         gradient = 1000.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -405,7 +404,7 @@ class TestEdgeCases:
     def test_equal_lower_and_upper_contours(self, simple_linear_lower, standard_bounds):
         """Test when both contours are identical"""
         gradient = 1.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_lower,  # Same contour for both
             gradient, 
@@ -421,7 +420,7 @@ class TestEdgeCases:
     def test_intercept_points_have_correct_U_values(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Verify intercept U coordinates match contour evaluations"""
         gradient = 1.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -441,7 +440,7 @@ class TestEdgeCases:
     def test_line_touches_both_contours(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """Verify the trajectory line actually touches both contours at intercept points"""
         gradient = 1.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -472,7 +471,7 @@ class TestConsistency:
         The upper intercept is not necessarily above the lower intercept in U -
         it depends on the geometry."""
         gradient = 1.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower,
             simple_linear_upper,
             gradient,
@@ -497,7 +496,7 @@ class TestConsistency:
         """The trajectory line must touch both contours somewhere, but may go 
         above or below them at other points. The key is that it intersects both."""
         gradient = 2.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             quadratic_lower,
             quadratic_upper,
             gradient,
@@ -533,10 +532,10 @@ class TestConsistency:
         bounds1 = (1000.0, 5000.0)
         bounds2 = (15000.0, 20000.0)
         
-        result1 = continuousLCDSUBTrajectory(
+        result1 = continuous_lcds_ub_trajectory(
             simple_linear_lower, simple_linear_upper, gradient, bounds1
         )
-        result2 = continuousLCDSUBTrajectory(
+        result2 = continuous_lcds_ub_trajectory(
             simple_linear_lower, simple_linear_upper, gradient, bounds2
         )
         
@@ -557,7 +556,7 @@ class TestPhysicalPlausibility:
     def test_intercept_B_values_are_positive(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """B field values should always be positive"""
         gradient = 1.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower, 
             simple_linear_upper, 
             gradient, 
@@ -570,7 +569,7 @@ class TestPhysicalPlausibility:
     def test_trajectory_stays_above_lower_contour(self, reciprocal_lower, reciprocal_upper, standard_bounds):
         """Physical trajectory should not go below the lower W=0 contour"""
         gradient = 0.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             reciprocal_lower, 
             reciprocal_upper, 
             gradient, 
@@ -598,7 +597,7 @@ class TestPhysicalPlausibility:
         For the line U = gradient*B + intercept to intersect both contours,
         the intercept must satisfy certain constraints based on the geometry."""
         gradient = 1.0
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower,
             simple_linear_upper,
             gradient,
@@ -617,7 +616,7 @@ class TestPhysicalPlausibility:
     def test_line_touches_both_contours_at_intercept_points(self, simple_linear_lower, simple_linear_upper, standard_bounds):
         """At the identified intercept points, the line should actually touch the contours"""
         gradient = 1.5
-        result = continuousLCDSUBTrajectory(
+        result = continuous_lcds_ub_trajectory(
             simple_linear_lower,
             simple_linear_upper,
             gradient,

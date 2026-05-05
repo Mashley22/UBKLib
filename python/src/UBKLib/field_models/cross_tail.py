@@ -1,15 +1,15 @@
 import numpy as np
-from typing import Union
+from ..types import Vectorizable
 
 CROSS_TAIL_STRENGTH = 10
 SURFACE_POTENTIAL = 94.2
 
 def cross_tail_potential(
-    x: Union[float, np.ndarray], 
-    y: Union[float, np.ndarray], 
-    cross_tail_strength: float = CROSS_TAIL_STRENGTH,
-    surface_potential: float = SURFACE_POTENTIAL
-) -> Union[float, np.ndarray]:
+        x: Vectorizable,
+        y: Vectorizable,
+        cross_tail_strength: float = CROSS_TAIL_STRENGTH,
+        surface_potential: float = SURFACE_POTENTIAL
+    ) -> Vectorizable:
     """
     Calculates the equatorial electric potential for a uniform cross-tail field 
     combined with corotation for a field line with equitorial crossing (x, y)
