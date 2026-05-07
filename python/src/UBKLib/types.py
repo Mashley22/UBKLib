@@ -3,6 +3,7 @@ from typing import Union
 import numpy.typing as npt
 import numpy as np
 from dataclasses import dataclass
+from enum import Enum
 
 Vectorizable = Union[float, npt.NDArray[np.float64]]
 
@@ -12,6 +13,14 @@ PotentialFunction = Callable[
         Vectorizable
     ],
     Vectorizable
+]
+
+MagneticAmplitudeFunction = Callable[
+    [
+        float,
+        float
+    ],
+    float
 ]
 
 W0ContourFunction = Callable[
@@ -45,3 +54,14 @@ class UBTrajectory:
     lower_intercept: Optional[UBCoord] = None
     upper_intercept: Optional[UBCoord] = None
 
+class TurningPointType(Enum):
+    MAXIMUM = 0
+    MINIMUM = 1
+
+@dataclass
+class TurningPoint:
+    type : TurningPointType
+    x : float
+    y : float
+    B : float
+    U : float = 0

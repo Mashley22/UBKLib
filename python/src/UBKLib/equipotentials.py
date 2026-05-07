@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from skimage import measure
 
-from .types import PotentialFunction
+from .types import PotentialFunction, MagneticAmplitudeFunction, TurningPoint, TurningPointType
 
 def __generate_potential_image(
         potential : PotentialFunction,
@@ -28,6 +28,69 @@ def __generate_potential_image(
     U_1d[valid_mask] = potential(X_1d[valid_mask], Y_1d[valid_mask])
 
     return U_1d.reshape(X_2d.shape)
+
+def find_contour_turning_points(
+        contour: npt.NDArray[np.float64],
+        magnetic_amplitude_func: MagneticAmplitudeFunction
+    ) -> List[TurningPoint]:
+
+    """Finds the turning points of the magnetic amplitude for a given contour
+    and a given magnetic ampltidue function
+    """
+    
+    turningPoints = []
+    magnetic_amplitudes = [magnetic_amplitude_func(x[0], x[1]) for x in contour]
+
+    for i in range(1, len(magnetic_amplitudes) - 1):
+        prev = magnetic_amplitudes[i - 1]
+        cur = magnetic_amplitudes[i]
+        nxt = magnetic_amplitudes[i + 1]
+
+        diff_prev = cur - prev
+        diff_curr = nxt - cur
+
+        if diff_prev >= 0 and diff_curr < 0:
+            turningPoints.append(
+                    TurningPoint(
+                        type=TurningPointType.MAXIMUM,
+                        x=contour[i][0],
+                        y=contour[i][1],
+                        B=cur)
+            )
+
+        elif diff_prev < 0 and diff_curr >= 0:
+            turningPoints.append(
+                    TurningPoint(
+                        type=TurningPointType.MINIMUM,
+                        x=contour[i][0],
+                        y=contour[i][1],
+                        B=cur)
+            )
+
+    return turningPoints
+
+def find_all_turning_points(
+        contours: List[List[npt.NDArray[np.float64]]],
+        magnetic_amplitude_func: MagneticAmplitudeFunction
+    ) -> List[List[List[TurningPointType]]]:
+
+    """
+    Finds all the turning points of all the contours, the return value structure is the same as
+    the input contour structure.
+
+    Returns:
+        Returns a nested list of lists of lists of TurningPoint,
+        follows the same structure as the contours, the first index is over the different potential values,
+        the second over the contours for this potential, the last list contains the turning points in this contour
+    """
+
+    turningPoints = [[] for _ in range(len(contours))]
+
+    for i in range(len(contours)):
+        for contour in contours[i]:
+             turningPoints[i].append(find_contour_turning_points(contour, magnetic_amplitude_func))
+
+    return turningPoints
 
 def generate_equipotentials(
         potential : PotentialFunction,
@@ -66,7 +129,13 @@ def generate_equipotentials(
 
     for i in range(len(levels)):
         raw_contours = measure.find_contours(potential_image, levels[i])
-
-        contours.append([np.flip(c, axis=1) for c in raw_contours])
+        mapped_contours = []
+        
+        for c in raw_contours:
+            x = np.interp(c[:, 1], [0, resolution - 1], [x_bounds[0], x_bounds[1]])
+            y = np.interp(c[:, 0], [0, resolution - 1], [y_bounds[0], y_bounds[1]])
+            mapped_contours.append(np.column_stack([x, y]))
+        
+        contours.append(mapped_contours)
 
     return contours

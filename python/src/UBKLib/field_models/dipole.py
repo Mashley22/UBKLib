@@ -4,7 +4,7 @@ from ..types import Vectorizable
 # (nT Re^3)
 SURFACE_STRENGTH = 31200
 
-def equitorial_dipole_amplitude(
+def equatorial_dipole_amplitude(
         x: Vectorizable,
         y: Vectorizable,
         surface_strength: float = SURFACE_STRENGTH,

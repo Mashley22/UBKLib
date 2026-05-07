@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from UBKLib import volland_stern_potential, cross_tail_potential, equitorial_dipole_amplitude
+from UBKLib import volland_stern_potential, cross_tail_potential, equatorial_dipole_amplitude
 
 class TestCrossTailPotential:
     
@@ -124,7 +124,7 @@ class TestEquatorialDipoleAmplitude:
         (6.6, 0.0, 31200.0 / (6.6**3)),         # r=6.6
     ])
     def test_scalar_coordinates(self, x, y, expected):
-        result = equitorial_dipole_amplitude(x, y)
+        result = equatorial_dipole_amplitude(x, y)
         assert result == pytest.approx(expected)
 
     def test_numpy_arrays(self):
@@ -137,7 +137,7 @@ class TestEquatorialDipoleAmplitude:
             31200 / 125.0,   # r=5.0
         ])
         
-        result = equitorial_dipole_amplitude(x_arr, y_arr)
+        result = equatorial_dipole_amplitude(x_arr, y_arr)
         
         assert isinstance(result, np.ndarray)
         np.testing.assert_allclose(result, expected)
@@ -149,7 +149,7 @@ class TestEquatorialDipoleAmplitude:
         x_vals = r * np.cos(angles)
         y_vals = r * np.sin(angles)
         
-        result = equitorial_dipole_amplitude(x_vals, y_vals)
+        result = equatorial_dipole_amplitude(x_vals, y_vals)
         
         expected = 31200 / (r**3)
         np.testing.assert_allclose(result, expected)
@@ -163,13 +163,13 @@ class TestEquatorialDipoleAmplitude:
     ])
     def test_radial_dist_below_surface(self, x, y):
         with pytest.raises(ValueError, match="Coordinates must supply a radial distance larger than 1 Re"):
-            equitorial_dipole_amplitude(x, y)
+            equatorial_dipole_amplitude(x, y)
 
     def test_inverse_cube_scaling(self):
         """Verify B ∝ 1/r³ by comparing different distances"""
         r1, r2 = 2.0, 6.0
-        B1 = equitorial_dipole_amplitude(r1, 0.0)
-        B2 = equitorial_dipole_amplitude(r2, 0.0)
+        B1 = equatorial_dipole_amplitude(r1, 0.0)
+        B2 = equatorial_dipole_amplitude(r2, 0.0)
         
         # B1/B2 should equal (r2/r1)³
         expected_ratio = (r2 / r1) ** 3
@@ -182,7 +182,7 @@ class TestEquatorialDipoleAmplitude:
         y_arr = np.array([0.0, 0.0, 0.0])
         
         with pytest.raises(ValueError):
-            equitorial_dipole_amplitude(x_arr, y_arr)
+            equatorial_dipole_amplitude(x_arr, y_arr)
 
     def test_large_array_performance(self):
         """Test with larger arrays to ensure vectorization works"""
@@ -191,7 +191,7 @@ class TestEquatorialDipoleAmplitude:
         x_arr = r
         y_arr = np.zeros_like(r)
         
-        result = equitorial_dipole_amplitude(x_arr, y_arr)
+        result = equatorial_dipole_amplitude(x_arr, y_arr)
         
         assert len(result) == n_points
         assert isinstance(result, np.ndarray)
@@ -200,7 +200,7 @@ class TestEquatorialDipoleAmplitude:
     def test_default_surface_strength(self):
         """Test that the default surface_strength parameter works"""
         r = 1.0
-        result = equitorial_dipole_amplitude(r, 0.0)
+        result = equatorial_dipole_amplitude(r, 0.0)
         assert result == pytest.approx(31200)
 
     @pytest.mark.parametrize("custom_strength", [
@@ -211,6 +211,6 @@ class TestEquatorialDipoleAmplitude:
     def test_custom_surface_strength(self, custom_strength):
         """Test with different surface strengths"""
         r = 2.0
-        result = equitorial_dipole_amplitude(2.0, 0.0, surface_strength=custom_strength)
+        result = equatorial_dipole_amplitude(2.0, 0.0, surface_strength=custom_strength)
         expected = custom_strength / (2.0**3)
         assert result == pytest.approx(expected)
