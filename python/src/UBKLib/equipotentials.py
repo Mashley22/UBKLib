@@ -29,6 +29,31 @@ def __generate_potential_image(
 
     return U_1d.reshape(X_2d.shape)
 
+def __lower_turning_point(
+        turning_point: TurningPoint
+    ) -> bool:
+
+    return turning_point.y < 0
+
+def __upper_turning_point(
+        turning_point: TurningPoint
+    ) -> bool:
+
+    return turning_point.y > 0
+
+def __parse_turning_points(
+        turning_points: List[List[List[TurningPoint]]],
+        cond: Callable[[TurningPoint], bool]
+    ) -> List[TurningPoint]:
+
+    retVal = []
+
+    for i in range(len(turning_points)):
+        for j in range(len(turning_points[i])):
+            for point in turning_points[i][j]:
+                if cond(point) is True:
+                    retVal.append(point)
+
 def find_contour_turning_points(
         contour: npt.NDArray[np.float64],
         magnetic_amplitude_func: MagneticAmplitudeFunction
@@ -72,7 +97,7 @@ def find_contour_turning_points(
 def find_all_turning_points(
         contours: List[List[npt.NDArray[np.float64]]],
         magnetic_amplitude_func: MagneticAmplitudeFunction
-    ) -> List[List[List[TurningPointType]]]:
+    ) -> List[List[List[TurningPoint]]]:
 
     """
     Finds all the turning points of all the contours, the return value structure is the same as
@@ -91,6 +116,24 @@ def find_all_turning_points(
              turningPoints[i].append(find_contour_turning_points(contour, magnetic_amplitude_func))
 
     return turningPoints
+
+def get_lower_contour_turning_points(
+        turning_points: List[List[List[TurningPoint]]]
+    ) -> List[TurningPoint]:
+    """Retrieves the lower contour turning points from the output of find_all_turning_points
+    returns them as a list
+    """
+    
+    __parse_turning_points(turning_points, __lower_turning_point)
+
+def get_upper_contour_turning_points(
+        turning_points: List[List[List[TurningPoint]]]
+    ) -> List[TurningPoint]:
+    """Retrieves the upper contour turning points from the output of find_all_turning_points
+    returns them as a list
+    """
+    
+    __parse_turning_points(turning_points, __upper_turning_point)
 
 def generate_equipotentials(
         potential : PotentialFunction,
