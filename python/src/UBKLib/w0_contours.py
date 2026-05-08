@@ -2,6 +2,7 @@ from collections.abc import Callable
 import numpy as np
 import numpy.typing as npt
 from typing import List
+from scipy.interpolate import CubicSpline
 
 from .types import (
     TurningPoint,
@@ -33,6 +34,8 @@ def __parse_turning_points(
             for point in turning_points[i][j]:
                 if cond(point) is True:
                     retVal.append(point)
+
+    return retVal
 
 
 def single_contour_w0_points(
@@ -102,16 +105,40 @@ def parse_lower_contour_w0_points(
         turning_points: List[List[List[TurningPoint]]]
     ) -> List[TurningPoint]:
     """Retrieves the lower contour (in U-B space) turning points from the output of find_all_turning_points
-    returns them as a single list of Turning points
+    returns them as a single list of TurningPoints
     """
     
-    __parse_turning_points(turning_points, __lower_turning_point)
+    return __parse_turning_points(turning_points, __lower_turning_point)
 
 def parse_upper_contour_w0_points(
         turning_points: List[List[List[TurningPoint]]]
     ) -> List[TurningPoint]:
     """Retrieves the upper contour (in U-B space) turning points from the output of find_all_turning_points
-    returns them as a list
+    returns them as a single list of TurningPoints
     """
     
-    __parse_turning_points(turning_points, __upper_turning_point)
+    return __parse_turning_points(turning_points, __upper_turning_point).sort(lambda x: x.B)
+
+def generate_ub_spline(
+        turning_points: List[TurningPoint]
+    ) -> CubicSpline:
+    """Computes and returns the cubic spline for the turing points as a function U(B)
+    """
+    sorted_list = sorted(turning_points, key=lambda x: x.B)
+
+    return CubicSpline([x.B for x in sorted_list], [x.U for x in sorted_list])
+
+def generate_ub_spline(
+        turning_points: List[TurningPoint]
+    ) -> tuple[CubicSpline, CubicSpline]:
+    """Computes and returns the cubic splines for the x(B) and y(B) respectively
+    """
+
+    sorted_list = sorted(turning_points, key=lambda x: x.B)
+
+    retVal = (
+        CubicSpline([x.B for x in sorted_list], [x.x for x in sorted_list]),
+        CubicSpline([x.B for x in sorted_list], [x.y for x in sorted_list])
+    )
+
+    return retVal
