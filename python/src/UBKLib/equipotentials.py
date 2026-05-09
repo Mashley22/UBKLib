@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from skimage import measure
 
-from .types import PotentialFunction, MagneticAmplitudeFunction, TurningPoint, TurningPointType
+from .types import PotentialFunction, TurningPoint, TurningPointType
 
 def __generate_potential_image(
         potential : PotentialFunction,

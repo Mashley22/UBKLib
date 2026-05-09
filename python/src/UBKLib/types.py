@@ -7,6 +7,10 @@ from enum import Enum
 
 Vectorizable = Union[float, npt.NDArray[np.float64]]
 
+"""
+inputs are x, y in solar magnetic coordinates
+(k or z information should be baked into the function directly)
+"""
 PotentialFunction = Callable[
     [
         Vectorizable,
@@ -15,6 +19,10 @@ PotentialFunction = Callable[
     Vectorizable
 ]
 
+"""
+inputs are x, y in solar magnetic coordinates
+(k or z information should be baked into the function directly)
+"""
 MagneticAmplitudeFunction = Callable[
     [
         float,

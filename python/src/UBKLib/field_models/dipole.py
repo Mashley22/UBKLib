@@ -10,11 +10,12 @@ def equatorial_dipole_amplitude(
         surface_strength: float = SURFACE_STRENGTH,
     ) -> Vectorizable:
     """
-    Calculates the value of the magnetic field strength at the equator
+    Calculates the value of the magnetic field strength at the (magnetic) equator,
+    i.e. z = 0 in solar magnetic coordinates
     
     Parameters:
-        x: Sunward-pointing coordinate in Earth Radii (Re).
-        y: Duskward-pointing coordinate in Earth Radii (Re).
+        x: x solar magnetic component (Re).
+        y: y solar magnetic component (Re).
 
     Raises:
         ValueError: If the coordinates supplied are smaller than a dist of 1 Re

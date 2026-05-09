@@ -14,12 +14,12 @@ def volland_stern_potential(
         convection_numerator: float = CONVECTION_NUMERATOR
     ) -> Vectorizable:
     """
-    Calculates the Volland Stern electric potential along a field line with equitorial
-    crossing at (x,  y)
+    Calculates the Volland Stern electric potential along a field line with equatorial
+    crossing at (x,  y) (solar magnetic)
     
     Parameters:
-        x: Sunward-pointing coordinate in Earth Radii (Re).
-        y: Duskward-pointing coordinate in Earth Radii (Re).
+        x: x solar magnetic component (Re).
+        y: y solar magnetic component (Re).
         kp: Kp index for geomagnetic activity.
         
     Raises:

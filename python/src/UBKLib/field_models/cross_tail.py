@@ -12,11 +12,11 @@ def cross_tail_potential(
     ) -> Vectorizable:
     """
     Calculates the equatorial electric potential for a uniform cross-tail field 
-    combined with corotation for a field line with equitorial crossing (x, y)
+    combined with corotation for a field line with equatorial crossing (x, y) (solar magnetic)
     
     Parameters:
-        x: Sunward-pointing coordinate in Earth Radii (Re).
-        y: Duskward-pointing coordinate in Earth Radii (Re).
+        x: x solar magnetic component (Re).
+        y: y solar magnetic component (Re).
 
     Raises:
         ValueError: If the coordinates supplied are smaller than a dist of 1 Re
