@@ -34,3 +34,10 @@ target_sources(sample_k0
   PRIVATE
     sample_k0.cpp
 )
+
+add_sample(sample_cli)
+
+target_sources(sample_cli
+  PRIVATE
+    sample_cli.cpp
+)
