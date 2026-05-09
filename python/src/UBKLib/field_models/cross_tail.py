@@ -4,12 +4,13 @@ from ..types import Vectorizable
 CROSS_TAIL_STRENGTH = 10
 SURFACE_POTENTIAL = 94.2
 
+
 def cross_tail_potential(
         x: Vectorizable,
         y: Vectorizable,
         cross_tail_strength: float = CROSS_TAIL_STRENGTH,
         surface_potential: float = SURFACE_POTENTIAL
-    ) -> Vectorizable:
+) -> Vectorizable:
     """
     Calculates the equatorial electric potential for a uniform cross-tail field 
     combined with corotation for a field line with equatorial crossing (x, y) (solar magnetic)

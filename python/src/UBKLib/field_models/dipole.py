@@ -4,11 +4,12 @@ from ..types import Vectorizable
 # (nT Re^3)
 SURFACE_STRENGTH = 31200
 
+
 def equatorial_dipole_amplitude(
         x: Vectorizable,
         y: Vectorizable,
         surface_strength: float = SURFACE_STRENGTH,
-    ) -> Vectorizable:
+) -> Vectorizable:
     """
     Calculates the value of the magnetic field strength at the (magnetic) equator,
     i.e. z = 0 in solar magnetic coordinates

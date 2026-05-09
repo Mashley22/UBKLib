@@ -1,9 +1,6 @@
-import numpy as np
 from scipy.optimize import minimize_scalar
-from dataclasses import dataclass
-from typing import Optional
 
-from .types import W0ContourFunction, Vectorizable, UBTrajectory, UBCoord
+from .types import W0ContourFunction, UBTrajectory, UBCoord
 from .field_models import dipole
 
 __MINIZER_OPTIONS = {
@@ -11,12 +8,13 @@ __MINIZER_OPTIONS = {
     'maxiter': 10000    
 }
 
+
 def __continuous_lcds_ub_intercept(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         gradient: float,
         B_bounds: tuple[float, float]
-    ) -> float:
+) -> float:
 
     if gradient >= 0:
         lower_minize_func = lambda x: gradient * x - lower_contour(x)
@@ -46,12 +44,13 @@ def __continuous_lcds_ub_intercept(
     else:
         return max(lower_result.fun, upper_result.fun)
 
+
 def continuous_lcds_ub_trajectory(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         gradient: float,
-        B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 **3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
-    ) -> UBTrajectory:
+        B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 ** 3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
+) -> UBTrajectory:
     """Calculates the the LCDS trajectory for a particle with a given gradient.
     
     Args:
@@ -70,7 +69,6 @@ def continuous_lcds_ub_trajectory(
     trajectory = UBTrajectory()
     trajectory.gradient = gradient
     trajectory.intercept = __continuous_lcds_ub_intercept(lower_contour, upper_contour, gradient, B_bounds)
-
 
     lower_result = minimize_scalar(lambda x: (gradient * x + trajectory.intercept - lower_contour(x)) ** 2,
                                    bounds=B_bounds,

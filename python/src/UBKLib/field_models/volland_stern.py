@@ -6,13 +6,14 @@ CONVECTION_NUMERATOR = 0.045
 CONVECTION_KP_LINEAR_COEFF = -0.0159
 CONVECTION_KP_QUADRATIC_COEFF = 0.0093
 
+
 def volland_stern_potential(
         x: Vectorizable, 
         y: Vectorizable, 
         kp: float = 3.0, 
         surface_potential: float = SURFACE_POTENTIAL,
         convection_numerator: float = CONVECTION_NUMERATOR
-    ) -> Vectorizable:
+) -> Vectorizable:
     """
     Calculates the Volland Stern electric potential along a field line with equatorial
     crossing at (x,  y) (solar magnetic)
