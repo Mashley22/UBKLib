@@ -1,7 +1,12 @@
 import pytest
 import numpy as np
 
-from UBKLib import volland_stern_potential, cross_tail_potential, equatorial_dipole_amplitude
+from UBKLib import (
+    volland_stern_potential, cross_tail_potential, equatorial_dipole_amplitude
+)
+
+from UBKLib.field_models import cross_tail, volland_stern
+
 
 class TestCrossTailPotential:
     
@@ -40,6 +45,10 @@ class TestCrossTailPotential:
     def test_radial_dist_below_surface(self, x, y):
         with pytest.raises(ValueError):
             cross_tail_potential(0.0, 0.0)
+
+    def test_stagnation_potential(self):
+        assert np.isclose(cross_tail.stagnation_potential(), -61.384)
+
 
 class TestVollandSternPotential:
 
@@ -214,3 +223,16 @@ class TestEquatorialDipoleAmplitude:
         result = equatorial_dipole_amplitude(2.0, 0.0, surface_strength=custom_strength)
         expected = custom_strength / (2.0**3)
         assert result == pytest.approx(expected)
+
+    @pytest.mark.parametrize("kp, expected_potential", [
+        (0, -13.9168),
+        (1, -14.00926),
+        (2, -13.84205),
+        (3, -13.43320),
+        (4, -12.82418),
+        (5, -12.07007),
+        (6, -11.2287),
+    ])
+    def test_volland_stern_stagnation_potential(self, kp, expected_potential):
+        result = volland_stern.stagnation_potential(kp=kp)
+        assert np.isclose(result, expected_potential)
