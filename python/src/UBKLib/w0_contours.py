@@ -3,6 +3,7 @@ import numpy as np
 import numpy.typing as npt
 from typing import List
 from scipy.interpolate import CubicSpline
+import pandas as pd
 
 from .types import (
     TurningPoint,
@@ -35,7 +36,7 @@ def __parse_turning_points(
     for i in range(len(turning_points)):
         for j in range(len(turning_points[i])):
             for point in turning_points[i][j]:
-                if cond(point) is True:
+                if cond(point):
                     retVal.append(point)
 
     return retVal
@@ -113,7 +114,6 @@ def parse_lower_contour_w0_points(
     """Retrieves the lower contour (in U-B space) turning points from the output of find_all_turning_points
     returns them as a single list of TurningPoints
     """
-    
     return __parse_turning_points(turning_points, __lower_turning_point)
 
 
@@ -124,7 +124,7 @@ def parse_upper_contour_w0_points(
     returns them as a single list of TurningPoints
     """
     
-    return __parse_turning_points(turning_points, __upper_turning_point).sort(lambda x: x.B)
+    return __parse_turning_points(turning_points, __upper_turning_point)
 
 
 def generate_ub_spline(
@@ -134,7 +134,10 @@ def generate_ub_spline(
     """
     sorted_list = sorted(turning_points, key=lambda x: x.B)
 
-    return CubicSpline([x.B for x in sorted_list], [x.U for x in sorted_list])
+    df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.U for x in sorted_list]})
+    grouped = df.groupby('x')['y'].mean().reset_index()
+
+    return CubicSpline(grouped['x'].values, grouped['y'].values)
 
 
 def generate_realSpace_splines(
@@ -145,9 +148,16 @@ def generate_realSpace_splines(
 
     sorted_list = sorted(turning_points, key=lambda x: x.B)
 
-    retVal = (
-        CubicSpline([x.B for x in sorted_list], [x.x for x in sorted_list]),
-        CubicSpline([x.B for x in sorted_list], [x.y for x in sorted_list])
-    )
+    retVal = []
+
+    df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.x for x in sorted_list]})
+    grouped = df.groupby('x')['y'].mean().reset_index()
+
+    retVal.append(CubicSpline(grouped['x'].values, grouped['y'].values))
+
+    df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.y for x in sorted_list]})
+    grouped = df.groupby('x')['y'].mean().reset_index()
+
+    retVal.append(CubicSpline(grouped['x'].values, grouped['y'].values))
 
     return retVal

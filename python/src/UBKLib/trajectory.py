@@ -1,6 +1,13 @@
 from scipy.optimize import minimize_scalar
+import numpy as np
+from collections.abc import Callable
 
-from .types import W0ContourFunction, UBTrajectory, UBCoord
+from .types import (
+    W0ContourFunction,
+    UBTrajectory,
+    UBCoord,
+    Vectorizable
+)
 from .field_models import dipole
 
 __MINIZER_OPTIONS = {
@@ -9,19 +16,74 @@ __MINIZER_OPTIONS = {
 }
 
 
+def classical_ub_trajectory(
+        B_m: Vectorizable,
+        mu: float,
+        charge: int,
+        intercept: float = 0
+) -> Vectorizable:
+    """
+    Calculates the classical trajectory of the mirror points of
+    a particle in U-B space as a function U(B_m)
+
+    Args:
+        B_m (nT): the magnitude of the magnetic field at the mirror point
+        mu (eV/nT): the value of the first adiabatic invariant
+        charge (e): the charge of the particle
+        intercept (kV): the intercept/constant term i.e U(0)
+
+    Returns:
+        the values U(B_m) for the given parameters
+    """
+
+    return intercept - B_m * mu / charge
+
+
+def relativistic_ub_trajectory(
+        B_m: Vectorizable,
+        mu: float,
+        charge: int,
+        rest_mass: float,
+        intercept: float = 0
+) -> Vectorizable:
+    """
+    Calculates the relivistice trajectory of the mirror points of
+    a particle in U-B space as a function U(B_m)
+
+    Args:
+        B_m (nT): the magnitude of the magnetic field at the mirror point
+        mu (keV/nT): the value of the first adiabatic invariant
+        charge (e): the charge of the particle
+        rest_mass (keV): the rest mass of the particle
+        intercept (kV): the intercept/constant term i.e U(0)
+
+    Returns:
+        the values U(B_m) for the given parameters
+    """
+
+    return intercept - rest_mass * np.sqrt(1 + 2 * mu * B_m / rest_mass) / charge
+
+
 def __continuous_lcds_ub_intercept(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
-        gradient: float,
+        trajectory: Callable[[float], float],
+        charge: int, 
         B_bounds: tuple[float, float]
 ) -> float:
 
-    if gradient >= 0:
-        lower_minize_func = lambda x: gradient * x - lower_contour(x)
-        upper_minize_func = lambda x: gradient * x - upper_contour(x)
+    if charge < 0:
+        def lower_minize_func(x):
+            return trajectory(x) - lower_contour(x)
+
+        def upper_minize_func(x):
+            return trajectory(x) - upper_contour(x)
     else:
-        lower_minize_func = lambda x: -(gradient * x - lower_contour(x))
-        upper_minize_func = lambda x: -(gradient * x - upper_contour(x))
+        def lower_minize_func(x):
+            return -trajectory(x) + lower_contour(x)
+
+        def upper_minize_func(x):
+            return -trajectory(x) + upper_contour(x)
     
     lower_result = minimize_scalar(lower_minize_func,
                                    bounds=B_bounds,
@@ -38,8 +100,8 @@ def __continuous_lcds_ub_intercept(
 
     if upper_result.success is False:
         raise RuntimeError(f"Scipy minimization failed: {upper_result.message}")
-        
-    if gradient >= 0:
+
+    if charge < 0:
         return min(-lower_result.fun, -upper_result.fun)
     else:
         return max(lower_result.fun, upper_result.fun)
@@ -48,7 +110,8 @@ def __continuous_lcds_ub_intercept(
 def continuous_lcds_ub_trajectory(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
-        gradient: float,
+        trajectory: Callable[[float], float],
+        charge: int,
         B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 ** 3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
 ) -> UBTrajectory:
     """Calculates the the LCDS trajectory for a particle with a given gradient.
@@ -66,11 +129,10 @@ def continuous_lcds_ub_trajectory(
         The trajectory information
     """
 
-    trajectory = UBTrajectory()
-    trajectory.gradient = gradient
-    trajectory.intercept = __continuous_lcds_ub_intercept(lower_contour, upper_contour, gradient, B_bounds)
+    trajectoryInf = UBTrajectory()
+    trajectoryInf.intercept = __continuous_lcds_ub_intercept(lower_contour, upper_contour, trajectory, charge, B_bounds)
 
-    lower_result = minimize_scalar(lambda x: (gradient * x + trajectory.intercept - lower_contour(x)) ** 2,
+    lower_result = minimize_scalar(lambda x: (trajectory(x) + trajectoryInf.intercept - lower_contour(x)) ** 2,
                                    bounds=B_bounds,
                                    method='bounded',
                                    options=__MINIZER_OPTIONS)
@@ -78,7 +140,7 @@ def continuous_lcds_ub_trajectory(
     if lower_result.success is False:
         raise RuntimeError(f"Scipy minimization failed: {lower_result.message}")
 
-    upper_result = minimize_scalar(lambda x: (gradient * x + trajectory.intercept - upper_contour(x)) ** 2,
+    upper_result = minimize_scalar(lambda x: (trajectory(x) + trajectoryInf.intercept - upper_contour(x)) ** 2,
                                    bounds=B_bounds,
                                    method='bounded',
                                    options=__MINIZER_OPTIONS)
@@ -86,7 +148,7 @@ def continuous_lcds_ub_trajectory(
     if upper_result.success is False:
         raise RuntimeError(f"Scipy minimization failed: {upper_result.message}")
 
-    trajectory.lower_intercept = UBCoord(B=lower_result.x, U=lower_contour(lower_result.x))
-    trajectory.upper_intercept = UBCoord(B=upper_result.x, U=upper_contour(upper_result.x))
+    trajectoryInf.lower_intercept = UBCoord(B=lower_result.x, U=lower_contour(lower_result.x))
+    trajectoryInf.upper_intercept = UBCoord(B=upper_result.x, U=upper_contour(upper_result.x))
 
-    return trajectory
+    return trajectoryInf

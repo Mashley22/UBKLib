@@ -5,10 +5,16 @@ from .field_models import (
 )
 
 from .equipotentials import generate_equipotentials
-from .trajectory import continuous_lcds_ub_trajectory
+from .trajectory import ( 
+    continuous_lcds_ub_trajectory,
+    classical_ub_trajectory,
+    relativistic_ub_trajectory
+)
 from .w0_contours import (
     single_contour_w0_points,
     contour_w0_points,
     parse_lower_contour_w0_points,
-    parse_upper_contour_w0_points
+    parse_upper_contour_w0_points,
+    generate_ub_spline,
+    generate_realSpace_splines,
 )
