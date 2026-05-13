@@ -52,10 +52,6 @@ int main() {
 
     try {
       fieldLine = generator.generateFieldLine(seed);
-    } catch(ubk::BifercatingFieldLine& e) {
-      (void)e;
-      bifercatingFieldLines++;
-      continue;
     } catch(std::runtime_error& e) {
       (void)e;
       continue;
@@ -65,8 +61,14 @@ int main() {
       shortFieldLines++;
       continue;
     }
-
-    calculateLongitudinalInvariants(fieldLine);
+    
+    try {
+      calculateLongitudinalInvariants(fieldLine);
+    } catch(ubk::BifercatingFieldLine& e) {
+      (void)e;
+      bifercatingFieldLines++;
+      continue;
+    }
     
     std::array<ubk::FieldLine<T, Field, params>::PointInfo, 2> points;
   

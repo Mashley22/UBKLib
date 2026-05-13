@@ -240,16 +240,10 @@ public:
   [[nodiscard]] FieldLine<T, FieldModel, Params>
   generateFieldLine(Vector3<Re<T>> startPoint) {
     clearAll_();
-    {
-      CurrentFieldLineInfo currentFieldLineInfo = {
-        .foundMinima = false,
-        .minMagneticIntensity = m_fieldModel.getField(startPoint).amp()
-      };
 
-      trace_<FillDirection::FORWARD>(currentFieldLineInfo, startPoint);
-      trace_<FillDirection::BACKWARD>(currentFieldLineInfo, startPoint);
-    }
-    
+    trace_<FillDirection::FORWARD>(startPoint);
+    trace_<FillDirection::BACKWARD>(startPoint);
+
     FieldLine<T, FieldModel, Params> fieldLine;
     std::size_t backIdx{0};
     std::size_t frontIdx{0};
@@ -301,11 +295,6 @@ private:
   std::vector<FieldLinePoint> m_forward;
   std::vector<FieldLinePoint> m_backward;
   FieldModel m_fieldModel;
-
-  struct CurrentFieldLineInfo {
-    bool foundMinima = false;
-    nanoTesla<T> minMagneticIntensity;
-  };
 
   enum class FillDirection {
     FORWARD,
@@ -359,7 +348,7 @@ private:
   
   template<FillDirection direc>
   void
-  trace_(CurrentFieldLineInfo& currentFieldLineInfo, Vector3<Re<T>> starting) {
+  trace_(Vector3<Re<T>> starting) {
     auto field = m_fieldModel.getField(starting);
     FieldLinePoint point = {
       .loc = starting,
@@ -372,25 +361,11 @@ private:
       throw std::runtime_error("Couldn't even take one step!");
     }
 
-    auto checkNotBifercating = [&](nanoTesla<T> newIntensity) {
-      if (newIntensity > currentFieldLineInfo.minMagneticIntensity) {
-        currentFieldLineInfo.foundMinima = true;
-      }
-      else {
-        if (currentFieldLineInfo.foundMinima) {
-          throw BifercatingFieldLine{};
-        }
-        currentFieldLineInfo.minMagneticIntensity = newIntensity;
-      }
-    };
-
     auto assignPoint = [&](const std::optional<Vector3<Re<T>>>& next) {
       point.loc = next.value();
       field = m_fieldModel.getField(point.loc);
       point.magneticIntensity = field.amp();
       
-      checkNotBifercating(point.magneticIntensity);
-
       buf_<direc>().push_back(point);
     };
 
@@ -518,7 +493,40 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
 
     return K;
   };
-  
+
+  {
+    T K = 0;
+    constexpr std::size_t startIdx = 0;
+    std::size_t idx = 0;
+    bool minimaFound = false;
+    T minIntensity = fieldLine.points()[startIdx].magneticIntensity;
+
+    auto nextIdx = [&](){ return static_cast<std::size_t>(static_cast<std::int64_t>(idx) + 1); };
+
+    while (fieldLine.points()[startIdx].magneticIntensity >
+      fieldLine.points()[nextIdx()].magneticIntensity) {
+      
+      if (fieldLine.points()[nextIdx()].magneticIntensity > minIntensity) {
+          if (minimaFound) { throw BifercatingFieldLine{}; }
+          minimaFound = true;
+      }
+      else {
+        minIntensity = fieldLine.points()[nextIdx()].magneticIntensity;
+      }
+
+      K += std::sqrt((fieldLine.points()[startIdx].magneticIntensity -
+                     fieldLine.points()[nextIdx()].magneticIntensity) *
+                     (fieldLine.points()[nextIdx()].loc -
+                     fieldLine.points()[idx].loc).ampSquared());
+
+      idx = nextIdx();
+
+      if (idx == 1 || idx == fieldLine.points().size() - 1) {
+        break;
+      }
+    }
+
+  }
   fieldLine.points().front().longitudinalInvariant = longitudinalInvariant(0, 1);
   fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size() - 1, -1);
   

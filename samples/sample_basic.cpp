@@ -27,13 +27,17 @@ int main() {
 
   try {
     fieldLine = generator.generateFieldLine(seed);
-  } catch(ubk::BifercatingFieldLine& e) {
-    (void)e;
-    std::cout << "Bifercating field line!";
-    return 0;
   } catch(std::runtime_error& e) {
     (void)e;
     std::cout << "Couldn't even take one step!";
+    return 0;
+  }
+
+  try {
+    calculateLongitudinalInvariants(fieldLine);
+  } catch(ubk::BifercatingFieldLine& e) {
+    (void)e;
+    std::cout << "Bifercating field line!";
     return 0;
   }
 

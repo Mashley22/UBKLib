@@ -31,13 +31,16 @@ int main() {
 
     try {
       fieldLine = generator.generateFieldLine(seed);
-    } catch(ubk::BifercatingFieldLine& e) {
-      (void)e;
-      continue;
     } catch(std::runtime_error& e) {
       (void)e;
       continue;
     }
+    try {
+      ubk::calculateLongitudinalInvariants(fieldLine);
+    } catch(ubk::BifercatingFieldLine& e) {
+      (void)e;
+      continue;
+    } 
 
     if (fieldLine.points().size() < MIN_FIELD_LINE_POINT_COUNT) {
       continue;

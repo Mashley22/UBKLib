@@ -94,8 +94,13 @@ int main(int argc, char** argv) {
   }
 
   auto fieldLine = generator.generateFieldLine(startPoint);
-  
-  ubk::calculateLongitudinalInvariants(fieldLine);
+  try { 
+    ubk::calculateLongitudinalInvariants(fieldLine);
+  } catch(ubk::BifercatingFieldLine& e) {
+    (void)e;
+    std::println("Bifercating field line!");
+    return 3;
+  }
 
   for (const T k : k_vals) {
     if (k != 0) {
