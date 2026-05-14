@@ -41,3 +41,19 @@ target_sources(sample_cli
   PRIVATE
     sample_cli.cpp
 )
+
+pybind11_add_module(sample_py MODULE sample_py.cpp)
+
+target_link_libraries(sample_py
+  PRIVATE
+    UBKLib
+)
+
+target_compile_options(sample_py
+  PRIVATE
+    ${PEDANTIC_COMPILE_OPTIONS}
+)
+
+set_target_properties(sample_py PROPERTIES
+  OUTPUT_NAME UBKLibpp
+)

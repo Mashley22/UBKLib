@@ -18,7 +18,6 @@ endif()
 
 if(UBKLIB_SAMPLES)
   add_compile_options(-O3 -march=native -fno-math-errno)
-  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
 set(PEDANTIC_COMPILE_OPTIONS
@@ -73,5 +72,8 @@ if(UBKLIB_UNIT_TEST)
 endif()
 
 if(UBKLIB_SAMPLES)
+  set(PYBIND11_FINDPYTHON ON)
+  add_subdirectory(extern/pybind11)
+
   add_subdirectory(samples)
 endif()
