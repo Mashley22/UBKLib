@@ -17,4 +17,5 @@ from .w0_contours import (
     parse_upper_contour_w0_points,
     generate_ub_spline,
     generate_realSpace_splines,
+    find_w0_points_in_region
 )
