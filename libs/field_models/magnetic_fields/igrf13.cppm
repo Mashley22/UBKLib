@@ -3,6 +3,7 @@ module;
 #include <array>
 #include <concepts>
 #include <cmath>
+#include <cxform.h>
 
 #include <UBK/macros.hpp>
 
@@ -981,7 +982,12 @@ public:
       
     const std::size_t interp_start_year = static_cast<std::size_t>((time.year - Data::START_YEAR) / Data::TIME_GAP) * Data::TIME_GAP + Data::START_YEAR;
 
-    const T interp_years = static_cast<T>(time.year) + static_cast<T>(m_dateToDOY(time.year, time.month, time.day) - 1) / Data::DAYS_PER_YEAR_AVG - static_cast<T>(interp_start_year);
+    const T interp_years =
+      static_cast<T>(time.year) +
+      static_cast<T>(m_dateToDOY(time.year, time.month, time.day) - 1 + (time.hours + time.minutes / 60 + time.seconds / 3600) / 24) / 
+      Data::DAYS_PER_YEAR_AVG -
+      static_cast<T>(interp_start_year);
+
     const T interp_frac = interp_years / Data::TIME_GAP;
 
     const std::size_t startIdx = (time.year - Data::START_YEAR) / Data::TIME_GAP;
@@ -996,8 +1002,18 @@ public:
   }
 
   [[nodiscard]] T
-  dipole_tilt(void) {
+  dipole_theta(void) const {
     return -acos(-m_g[0][1] / std::sqrt(pow(m_g[0][1], 2) + pow(m_g[1][1], 2) + pow(m_h[1][1], 2)));
+  }
+
+  [[nodiscard]] T
+  dipole_phi(void) const {
+    return acos(m_g[1][1] / std::sqrt(pow(m_g[1][1], 2) + pow(m_h[1][1], 2)));
+  }
+
+  [[nodiscard]] T
+  dipole_tilt(void) const {
+    return ::dipole_tilt(Base::time_es());
   }
     
   [[nodiscard]] Vector3<nanoTesla<T>>
