@@ -12,7 +12,8 @@ from .types import (
     TurningPoint,
     TurningPointType,
     MagneticAmplitudeFunction,
-    PotentialFunction
+    PotentialFunction,
+    TurningPointWithErrors
 )
 
 from .equipotentials import generate_equipotentials
@@ -310,3 +311,120 @@ def find_w0_points_in_region(
         parse_lower_contour_w0_points(final_w0_points),
         parse_upper_contour_w0_points(final_w0_points)
     )
+
+
+def w0_points_from_cloud(
+        x: npt.NDArray[np.float64],
+        y: npt.NDArray[np.float64],
+        B: npt.NDArray[np.float64],
+        U: npt.NDArray[np.float64],
+        B_bins: List[float],
+        percentile: float
+) -> tuple[List[TurningPointWithErrors], List[TurningPointWithErrors]]:
+    """
+    Gets the extrema in U, B space from a point cloud in the space by calculating
+    the extrema of U in given B bins. It takes the given average of the percentile limits,
+    returning the average and the deviation of the points.
+
+    The arrays x, y, B, U should be matched such that for a given index i,
+    x[i], y[i], B[i], U[i] describes this point.
+
+    It is advisable to trim off the end points since these tend to be fairly garbage
+
+    Args:
+        x (Re): the x values of the points
+        y (Re): the y values of the points
+        B (nT): the values of the magnetic intensity
+        U (kV): the values of the electric potential
+        B_bins (nT): the edges of the B bins to search in
+        percentile : the percentile over which to average the points in
+
+    Returns:
+        two lists, the first list corresponding to the upper extrema, the second to the lower extrema
+
+    """
+    
+    n_bins = len(B_bins) - 1
+    
+    upper_extrema: List[TurningPointWithErrors] = []
+    lower_extrema: List[TurningPointWithErrors] = []
+    
+    for i in range(n_bins):
+        mask = (B >= B_bins[i]) & (B < B_bins[i + 1])
+        
+        if i == n_bins - 1:
+            mask = (B >= B_bins[i]) & (B <= B_bins[i + 1])
+        
+        if not mask.any():
+            continue
+        
+        x_bin = x[mask]
+        y_bin = y[mask]
+        B_bin = B[mask]
+        U_bin = U[mask]
+        
+        threshold_up = np.percentile(U_bin, percentile)
+        upper_mask = U_bin >= threshold_up
+        upper_U = U_bin[upper_mask]
+        
+        if len(upper_U) > 0:
+            x_up_mean = np.mean(x_bin[upper_mask])
+            y_up_mean = np.mean(y_bin[upper_mask])
+            B_up_mean = np.mean(B_bin[upper_mask])
+            U_up_mean = np.mean(upper_U)
+            
+            x_up_std = np.std(x_bin[upper_mask])
+            y_up_std = np.std(y_bin[upper_mask])
+            B_up_std = np.std(B_bin[upper_mask])
+            U_up_std = np.std(upper_U)
+            
+            upper_extrema.append(TurningPointWithErrors(
+                pos=TurningPoint(
+                    type=TurningPointType.MINIMUM,
+                    x=x_up_mean,
+                    y=y_up_mean,
+                    B=B_up_mean,
+                    U=U_up_mean
+                ),
+                err=TurningPoint(
+                    type=TurningPointType.MINIMUM,
+                    x=x_up_std,
+                    y=y_up_std,
+                    B=B_up_std,
+                    U=U_up_std
+                )
+            ))
+        
+        threshold_lo = np.percentile(U_bin, 100 - percentile)
+        lower_mask = U_bin <= threshold_lo
+        lower_U = U_bin[lower_mask]
+        
+        if len(lower_U) > 0:
+            x_lo_mean = np.mean(x_bin[lower_mask])
+            y_lo_mean = np.mean(y_bin[lower_mask])
+            B_lo_mean = np.mean(B_bin[lower_mask])
+            U_lo_mean = np.mean(lower_U)
+            
+            x_lo_std = np.std(x_bin[lower_mask])
+            y_lo_std = np.std(y_bin[lower_mask])
+            B_lo_std = np.std(B_bin[lower_mask])
+            U_lo_std = np.std(lower_U)
+            
+            lower_extrema.append(TurningPointWithErrors(
+                pos=TurningPoint(
+                    type=TurningPointType.MAXIMUM,
+                    x=x_lo_mean,
+                    y=y_lo_mean,
+                    B=B_lo_mean,
+                    U=U_lo_mean
+                ),
+                err=TurningPoint(
+                    type=TurningPointType.MAXIMUM,
+                    x=x_lo_std,
+                    y=y_lo_std,
+                    B=B_lo_std,
+                    U=U_lo_std
+                )
+            ))
+    
+    return upper_extrema, lower_extrema

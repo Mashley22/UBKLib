@@ -75,3 +75,9 @@ class TurningPoint:
     y: float
     B: float
     U: float = 0
+
+
+@dataclass
+class TurningPointWithErrors:
+    pos: TurningPoint
+    err: TurningPoint
