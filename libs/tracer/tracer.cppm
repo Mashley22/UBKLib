@@ -312,15 +312,14 @@ private:
   [[nodiscard]] std::optional<Vector3<Re<T>>>
   takeStep_(Vector3<Re<T>> loc, Vector3<nanoTesla<T>> field, nanoTesla<T> fieldIntensity) {
     T h = Params.maxStepSize;
+    field = field / fieldIntensity;
     if constexpr (direc == FillDirection::BACKWARD) {
       h = -1 * h;
     }
     
     while(true) {
-      Vector3<Re<T>> step = static_cast<T>(0.5) * h * (field + m_fieldModel.getField(loc + h * field / fieldIntensity)).normalised();
+      Vector3<Re<T>> step = h * (field + m_fieldModel.getField(loc + h * field)).normalised();
       Vector3<Re<T>> newLoc = step + loc;
-      if constexpr (direc == FillDirection::BACKWARD) {
-      }
       if (validStep_(newLoc)) {
         return newLoc;
       }
