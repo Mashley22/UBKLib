@@ -979,25 +979,25 @@ public:
       return;
     }
       
-    std::size_t interp_start_year = static_cast<std::size_t>((time.year - Data::START_YEAR) / Data::TIME_GAP) * Data::TIME_GAP + Data::START_YEAR;
+    const std::size_t interp_start_year = static_cast<std::size_t>((time.year - Data::START_YEAR) / Data::TIME_GAP) * Data::TIME_GAP + Data::START_YEAR;
 
-    T interp_years = static_cast<T>(time.year) + static_cast<T>(m_dateToDOY(time.year, time.month, time.day) - 1) / Data::DAYS_PER_YEAR_AVG - static_cast<T>(interp_start_year);
-    T interp_frac = interp_years / Data::TIME_GAP;
+    const T interp_years = static_cast<T>(time.year) + static_cast<T>(m_dateToDOY(time.year, time.month, time.day) - 1) / Data::DAYS_PER_YEAR_AVG - static_cast<T>(interp_start_year);
+    const T interp_frac = interp_years / Data::TIME_GAP;
 
-    std::size_t startIdx = (time.year - Data::START_YEAR) / Data::TIME_GAP;
-    std::size_t endIdx = startIdx + 1;
+    const std::size_t startIdx = (time.year - Data::START_YEAR) / Data::TIME_GAP;
+    const std::size_t endIdx = startIdx + 1;
 
     for (std::size_t i = 0; i < Data::COEFF_SIZE; i++) {
       for (std::size_t j = 0; j < Data::COEFF_SIZE; j++) {
-        m_g[i][j] = Data::g_arrs[startIdx][i][j] * (interp_frac - 1) + interp_frac * Data::g_arrs[endIdx][i][j];
-        m_h[i][j] = Data::h_arrs[startIdx][i][j] * (interp_frac - 1) + interp_frac * Data::h_arrs[endIdx][i][j];
+        m_g[i][j] = Data::g_arrs[startIdx][i][j] * (1 - interp_frac) + interp_frac * Data::g_arrs[endIdx][i][j];
+        m_h[i][j] = Data::h_arrs[startIdx][i][j] * (1 - interp_frac) + interp_frac * Data::h_arrs[endIdx][i][j];
       }
     }
   }
 
   [[nodiscard]] T
   dipole_tilt(void) {
-    return -acos(-m_g[0][1] / std::sqrt(pow(m_g[0][1], 2) + pow(m_g[0][1], 2) + pow(m_h[1][1], 2)));
+    return -acos(-m_g[0][1] / std::sqrt(pow(m_g[0][1], 2) + pow(m_g[1][1], 2) + pow(m_h[1][1], 2)));
   }
     
   [[nodiscard]] Vector3<nanoTesla<T>>
@@ -1026,6 +1026,7 @@ public:
           p_n_m = sin(sphericalCoords.theta) * pDiag;
           dp_n_m = sin(sphericalCoords.theta) * d_pDiag + cos(sphericalCoords.theta) * pDiag;
           pDiag = p_n_m;
+          pPrevN = pDiag;
           pPrev2n = 0;
           d_pDiag = dp_n_m;
           d_pPrevN = d_pDiag;
@@ -1041,10 +1042,10 @@ public:
             p_n_m = cos(sphericalCoords.theta) * pPrevN - k * pPrev2n;
             dp_n_m = cos(sphericalCoords.theta) * d_pPrevN - sin(sphericalCoords.theta) * pPrevN - k * d_pPrev2n;
           }
-            pPrev2n = pPrevN;
-            pPrevN = p_n_m;
-            d_pPrev2n = d_pPrevN;
-            d_pPrevN = dp_n_m;
+          pPrev2n = pPrevN;
+          pPrevN = p_n_m;
+          d_pPrev2n = d_pPrevN;
+          d_pPrevN = dp_n_m;
         }
 
         const T m_phi = static_cast<T>(m) * sphericalCoords.phi;
@@ -1093,8 +1094,8 @@ private:
     const T cp = cos(pos.phi);
 
     return {
-      .x = b_radial * st * cp + b_theta * ct * cp - b_phi * sp,
-      .y = b_radial * st * sp + b_theta * ct * sp + b_phi * cp,
+      .x = b_radial * st * cp + b_theta * ct * cp + b_phi * sp,
+      .y = b_radial * st * sp + b_theta * ct * sp - b_phi * cp,
       .z = b_radial * ct - b_theta * st
     };
   }
