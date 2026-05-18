@@ -2,7 +2,10 @@ from collections.abc import Callable
 import numpy as np
 import numpy.typing as npt
 from typing import List
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import (
+    CubicSpline,
+    make_splrep
+)
 import pandas as pd
 
 from .types import (
@@ -13,6 +16,9 @@ from .types import (
 )
 
 from .equipotentials import generate_equipotentials
+
+
+SINGULAR_VAL = 1e-12
 
 
 def __lower_turning_point(
@@ -45,6 +51,97 @@ def __parse_turning_points(
     return retVal
 
 
+def __split_into_valid_segments(
+        contour: npt.NDArray[np.float64],
+        magnetic_amplitudes: MagneticAmplitudeFunction
+) -> tuple[npt.NDArray[np.float64], list[float]]:
+    
+    contour_segments = []
+    amplitude_segments = []
+
+    ctr_segment = []
+    amp_segment = []
+
+    for amp, pos in zip(magnetic_amplitudes, contour):
+        if np.isfinite(amp):
+            amp_segment.append(amp)
+            ctr_segment.append(pos)
+        else:
+            if len(amp_segment) > 0:
+                amplitude_segments.append(amp_segment)
+                contour_segments.append(ctr_segment)
+                amp_segment = []
+                ctr_segment = []
+
+    if len(amp_segment) > 0:
+        amplitude_segments.append(amp_segment)
+        contour_segments.append(ctr_segment)
+    
+    return (contour_segments, amplitude_segments)
+
+
+def __single_contour_w0_points(
+        contour: npt.NDArray[np.float64],
+        magnetic_amplitudes: MagneticAmplitudeFunction
+) -> List[TurningPoint]:
+
+    if len(contour) < 32:
+        return []
+
+    x_idxs = np.arange(len(contour))
+
+    if len(magnetic_amplitudes) < 4:
+        return []
+
+    mag_amp_spl = make_splrep(x_idxs, magnetic_amplitudes, s=len(x_idxs))
+
+    d_spl = mag_amp_spl.derivative(1)
+    d2_spl = mag_amp_spl.derivative(2)
+    
+    x_dense = x_idxs
+    deriv_vals = d_spl(x_dense)
+    
+    sign_changes = np.where(np.diff(np.sign(deriv_vals)))[0]
+
+    turningPoints = []
+    cidxs = []
+
+    for idx in sign_changes:
+        # only expecting maxs or mins
+        x1, x2 = x_dense[idx], x_dense[idx + 1]
+        if abs(deriv_vals[idx + 1] - deriv_vals[idx]) > SINGULAR_VAL:
+            critical_idx = x1 - deriv_vals[idx] * (x2 - x1) / (deriv_vals[idx + 1] - deriv_vals[idx])
+        else:
+            critical_idx = (x1 + x2) / 2
+
+        if critical_idx < 1:
+            continue
+
+        critical_idx = np.clip(critical_idx, 0, len(contour) - 1)
+        cidxs.append(critical_idx)
+
+        crit_floor = int(np.floor(critical_idx))
+        crit_ceil = int(min(crit_floor + 1, len(contour) - 1))
+
+        frac = critical_idx - crit_floor
+
+        if d2_spl(critical_idx) < 0:
+            tpt = TurningPointType.MAXIMUM
+        else:
+            tpt = TurningPointType.MINIMUM
+        
+        turningPoints.append(
+            TurningPoint(
+                type=tpt,
+                x=(1 - frac) * contour[int(crit_floor)][0] + frac * contour[int(crit_ceil)][0],
+                y=(1 - frac) * contour[int(crit_floor)][1] + frac * contour[int(crit_ceil)][1],
+                B=mag_amp_spl(critical_idx)
+            )
+        )
+
+    return turningPoints
+
+
 def single_contour_w0_points(
         contour: npt.NDArray[np.float64],
         magnetic_amplitude_func: MagneticAmplitudeFunction
@@ -53,39 +150,18 @@ def single_contour_w0_points(
     assumes that these points are also the points of dB/dS = 0 where S parametrises
     the contour of constant U
     """
+    magnetic_amplitudes = np.array([magnetic_amplitude_func(x[0], x[1]) for x in contour])
+    mask = ~np.isnan(magnetic_amplitudes)
+    magnetic_amplitudes = magnetic_amplitudes[mask]
+
+    retVal = []
+
+    valid_contours, valid_amps = __split_into_valid_segments(contour, magnetic_amplitudes)
     
-    turningPoints = []
-    magnetic_amplitudes = [magnetic_amplitude_func(x[0], x[1]) for x in contour]
+    for ctr, amps in zip(valid_contours, valid_amps):
+        retVal.extend(__single_contour_w0_points(ctr, amps))
 
-    for i in range(1, len(magnetic_amplitudes) - 1):
-        prev = magnetic_amplitudes[i - 1]
-        cur = magnetic_amplitudes[i]
-        nxt = magnetic_amplitudes[i + 1]
-
-        diff_prev = cur - prev
-        diff_curr = nxt - cur
-
-        if diff_prev >= 0 and diff_curr < 0:
-            turningPoints.append(
-                TurningPoint(
-                    type=TurningPointType.MAXIMUM,
-                    x=contour[i][0],
-                    y=contour[i][1],
-                    B=cur
-                )
-            )
-
-        elif diff_prev < 0 and diff_curr >= 0:
-            turningPoints.append(
-                TurningPoint(
-                    type=TurningPointType.MINIMUM,
-                    x=contour[i][0],
-                    y=contour[i][1],
-                    B=cur
-                )
-            )
-
-    return turningPoints
+    return retVal
 
 
 def contour_w0_points(
@@ -105,6 +181,7 @@ def contour_w0_points(
     turningPoints = [[] for _ in range(len(contours))]
 
     for i in range(len(contours)):
+        print(i)
         for contour in contours[i]:
             turningPoints[i].append(single_contour_w0_points(contour, magnetic_amplitude_func))
 
@@ -167,15 +244,14 @@ def generate_realSpace_splines(
 
 
 def find_w0_points_in_region(
-    x_bounds: tuple[float, float],
-    y_bounds: tuple[float, float],
-    potential_levels: List[float],
-    magnetic_amplitude_func: MagneticAmplitudeFunction,
-    electric_potential_func: PotentialFunction,
-    final_resolution: int,
-    initial_resolution: int,
+        x_bounds: tuple[float, float],
+        y_bounds: tuple[float, float],
+        potential_levels: List[float],
+        magnetic_amplitude_func: MagneticAmplitudeFunction,
+        electric_potential_func: PotentialFunction,
+        final_resolution: int,
+        initial_resolution: int,
 ) -> tuple[List[TurningPoint], List[TurningPoint]]:
-    print(x_bounds, y_bounds)
     """
     Calculates and finds any of the W = 0 points in a specific region 
     for the given parameters, first testing at a lower resolution, then 
@@ -201,19 +277,20 @@ def find_w0_points_in_region(
         points
     """
 
-    initial_contours = generate_equipotentials(
-        electric_potential_func,
-        potential_levels,
-        x_bounds,
-        y_bounds,
-        initial_resolution
-    )
+    if initial_resolution is not None:
+        initial_contours = generate_equipotentials(
+            electric_potential_func,
+            potential_levels,
+            x_bounds,
+            y_bounds,
+            initial_resolution
+        )
+        
+        intial_w0_points = contour_w0_points(initial_contours, magnetic_amplitude_func)
 
-    intial_w0_points = contour_w0_points(initial_contours, magnetic_amplitude_func)
-
-    if not any(item for sublist1 in intial_w0_points for sublist2 in sublist1 for item in sublist2):
-        return ([], [])
-    
+        if not any(item for sublist1 in intial_w0_points for sublist2 in sublist1 for item in sublist2):
+            return ([], [])
+        
     final_contours = generate_equipotentials(
         electric_potential_func,
         potential_levels,
