@@ -270,7 +270,7 @@ public:
       T rqd = 1 / (pow(xxd, 2) + XLD2);
       T rqds = std::sqrt(rqd);
       T h = 0.5 * (1 + xxd * rqds);
-      T hs = -0.5 * XLD2 * rqd * rqds;
+      T hs = 0.5 * XLD2 * rqd * rqds;
       T gamh = GAM_rateOfTailSheetThickening() * h;
       d += gamh;
       T xghs = coords_sm.x * GAM_rateOfTailSheetThickening() * hs;
@@ -281,7 +281,7 @@ public:
     T xsmx = coords_sm.x - SX_discVectorPotentialScaleXOffset();
     T rdsq = std::sqrt(1 / (pow(xsmx, 2) + XLW2));
     T v = (1 - xsmx * rdsq) / 2;
-    T dvx = (XLW2 / 2) * pow(rdsq, 3);
+    T dvx = -(XLW2 / 2) * pow(rdsq, 3);
     T om = std::sqrt(std::sqrt(pow(coords_sm.x, 2) + 16) - coords_sm.x);
     T oms =- om / (om * om + coords_sm.x) / 2;
     T rdy = 1 / (P_dyCharacteristicWScale() + Q_dyXDependence() * om);
@@ -321,7 +321,7 @@ public:
         .z = dbzc1 * cos(m_dipole_tilt) - dbxc1 * sin(m_dipole_tilt)}, 
 
       { .x = dbxc2 * cos(m_dipole_tilt) + dbzc2 * sin(m_dipole_tilt),
-        .y = brrz2 * ringCurrentInfo.zr,
+        .y = brrz2 * coords.y * ringCurrentInfo.zr,
         .z = dbzc2 * cos(m_dipole_tilt) - dbxc2 * sin(m_dipole_tilt)},
       
       m_dipole_tilt
@@ -348,14 +348,14 @@ public:
     T zpl = coords.z + RT;
     T zmn = coords.z - RT;
     T rho_2 = pow(coords.x, 2) + pow(coords.y, 2);
-    T spl = std::sqrt(pow(zpl, 2));
+    T spl = std::sqrt(pow(zpl, 2) + rho_2);
     T smn = std::sqrt(pow(zmn, 2) + rho_2);
     T xsxc = coords.x - SXC;
     T rqc2 = 1 / (pow(xsxc, 2) + XLWC2);
     T rqc = std::sqrt(rqc2);
     T fyc = 1 / (1 + pow(coords.y / DYC_closureCurrentCharacteristicScale(), 2));
     T wc =  (1 - xsxc * rqc) * fyc / 2;
-    T dwcx = XLWC2 * rqc2 * rqc * fyc / 2;
+    T dwcx = -XLWC2 * rqc2 * rqc * fyc / 2;
     T dwcy = -2 * wc * fyc * coords.y / pow(DYC_closureCurrentCharacteristicScale(), 2);
     T szrp = 1 / (spl + zpl);
     T szrm = 1 / (smn - zmn);
