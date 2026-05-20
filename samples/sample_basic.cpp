@@ -27,17 +27,15 @@ int main() {
 
   try {
     fieldLine = generator.generateFieldLine(seed);
-  } catch(std::runtime_error& e) {
-    (void)e;
+  } catch(std::runtime_error) {
     std::cout << "Couldn't even take one step!";
     return 0;
   }
 
   try {
     calculateLongitudinalInvariants(fieldLine);
-  } catch(ubk::BifercatingFieldLine& e) {
-    (void)e;
-    std::cout << "Bifercating field line!";
+  } catch(ubk::BifurcatingFieldLine) {
+    std::cout << "Bifurcating field line!";
     return 0;
   }
 

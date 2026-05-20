@@ -7,7 +7,7 @@ import UBKLib;
 
 using T = double;
 
-constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 1000;
+constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 50;
 
 struct Field {
   ubk::Igrf13<T> igrf13;
@@ -42,7 +42,7 @@ int main() {
   ubk::UniformEquatorGenerator<T> rng(1.0, 15.0);
   
   std::size_t totalValidPointsTraced = 0;
-  std::size_t bifercatingFieldLines = 0;
+  std::size_t bifurcatingFieldLines = 0;
   std::size_t shortFieldLines = 0;
 
   std::size_t i = 0;
@@ -52,8 +52,7 @@ int main() {
 
     try {
       fieldLine = generator.generateFieldLine(seed);
-    } catch(std::runtime_error& e) {
-      (void)e;
+    } catch(std::runtime_error) {
       continue;
     }
 
@@ -64,9 +63,10 @@ int main() {
     
     try {
       calculateLongitudinalInvariants(fieldLine);
-    } catch(ubk::BifercatingFieldLine& e) {
-      (void)e;
-      bifercatingFieldLines++;
+    } catch(ubk::BifurcatingFieldLine) {
+      bifurcatingFieldLines++;
+      continue;
+    } catch(ubk::NoMinimaFound) {
       continue;
     }
     
@@ -83,7 +83,7 @@ int main() {
   
   std::cout << "Valid field lines traced: " << NUM_FIELD_LINES_TO_TRACE << '\n';
   std::cout << "Total valid points traced: " << totalValidPointsTraced << '\n';
-  std::cout << "Bifercating field lines: " << bifercatingFieldLines << '\n';
+  std::cout << "Bifurcating field lines: " << bifurcatingFieldLines << '\n';
   std::cout << "Short field lines: " << shortFieldLines;
 
   return 0;

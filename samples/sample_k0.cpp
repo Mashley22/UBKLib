@@ -31,14 +31,12 @@ int main() {
 
     try {
       fieldLine = generator.generateFieldLine(seed);
-    } catch(std::runtime_error& e) {
-      (void)e;
+    } catch(std::runtime_error) {
       continue;
     }
     try {
       ubk::calculateLongitudinalInvariants(fieldLine);
-    } catch(ubk::BifercatingFieldLine& e) {
-      (void)e;
+    } catch(ubk::BifurcatingFieldLine) {
       continue;
     } 
 

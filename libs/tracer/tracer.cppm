@@ -10,6 +10,8 @@ module;
 #include <utility>
 #include <fstream>
 
+#include <iostream>
+
 #include <UBK/macros.hpp>
 
 export module UBKLib.tracer;
@@ -25,7 +27,7 @@ oppositeSigns(T a, T b) {
 
 export namespace ubk {
 
-class BifercatingFieldLine {};
+class BifurcatingFieldLine {};
 
 class NoMinimaFound {};
 
@@ -505,9 +507,9 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
     while (fieldLine.points()[startIdx].magneticIntensity >
       fieldLine.points()[nextIdx()].magneticIntensity) {
       
-      if (fieldLine.points()[nextIdx()].magneticIntensity > minIntensity) {
-          if (minimaFound) { throw BifercatingFieldLine{}; }
-          minimaFound = true;
+      if (fieldLine.points()[nextIdx()].magneticIntensity < minIntensity) {
+        if (minimaFound) { throw BifurcatingFieldLine{}; }
+        minimaFound = true;
       }
       else {
         minIntensity = fieldLine.points()[nextIdx()].magneticIntensity;
@@ -524,9 +526,13 @@ calculateLongitudinalInvariants(FieldLine<T, FieldModel, Params>& fieldLine) {
         break;
       }
     }
-
+      
+    if (!minimaFound) {
+      throw NoMinimaFound{};
+    }
+    fieldLine.points().front().longitudinalInvariant = K;
   }
-  fieldLine.points().front().longitudinalInvariant = longitudinalInvariant(0, 1);
+
   fieldLine.points().back().longitudinalInvariant = longitudinalInvariant(fieldLine.points().size() - 1, -1);
   
   // for a bit of certainty here
