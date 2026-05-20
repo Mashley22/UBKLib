@@ -42,6 +42,13 @@ target_sources(sample_cli
     sample_cli.cpp
 )
 
+add_sample(sample_mt)
+
+target_sources(sample_mt
+  PRIVATE
+    sample_mt.cpp
+)
+
 if(UBKLIB_PY_SAMPLES)
 
   pybind11_add_module(sample_py MODULE sample_py.cpp)
