@@ -2,7 +2,7 @@ import numpy as np
 from ..types import Vectorizable
 
 CROSS_TAIL_STRENGTH = 10
-SURFACE_POTENTIAL = 94.2
+SURFACE_POTENTIAL = 92.4
 
 
 def stagnation_potential(
