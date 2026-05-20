@@ -8,7 +8,11 @@ import UBKLib;
 
 #define DEFAULT_NUM_FIELD_LINES_TO_TRACE 1000
 #define DEFAULT_K_VAL 100
-#define NUM_THREADS 8
+#define DEFAULT_THREAD_COUNT 8
+
+#define K_VAL_ARG_IDX 1
+#define NUM_FIELD_LINES_ARG_IDX 2
+#define THREAD_COUNT_ARG_IDX 3
 
 using T = double;
 
@@ -16,6 +20,7 @@ constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 50;
 
 static T k_val = DEFAULT_K_VAL;
 static unsigned long long num = DEFAULT_NUM_FIELD_LINES_TO_TRACE;
+static unsigned long thread_count = DEFAULT_THREAD_COUNT;
 
 struct Field {
   ubk::Igrf13<T> igrf13;
@@ -100,12 +105,13 @@ int main(int argc, char** argv) {
   std::atomic<bool> done{false};
   std::vector<std::thread> threads;
 
-  if (argc == 3) {
-    k_val = std::stod(argv[1]);
-    num = std::stoull(argv[2]);
+  if (argc == 4) {
+    k_val = std::stod(argv[K_VAL_ARG_IDX]);
+    num = std::stoull(argv[NUM_FIELD_LINES_ARG_IDX]);
+    thread_count = std::stoul(argv[THREAD_COUNT_ARG_IDX]);
   }
   
-  for (std::size_t t = 0; t < NUM_THREADS; t++) {
+  for (std::size_t t = 0; t < thread_count; t++) {
     threads.emplace_back(worker, std::ref(results), std::ref(done));
   }
   

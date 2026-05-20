@@ -2,12 +2,27 @@
 
 import UBKLib;
 
-#define NUM_FIELD_LINES_TO_TRACE 100
-#define K_VAL 100
-
 using T = double;
 
+#define DEFAULT_NUM_FIELD_LINES_TO_TRACE 100
+#define DEFAULT_K_VAL 100
+
+#define NUM_FIELD_LINES_ARG_IDX 2
+#define K_VAL_ARG_IDX 1
+
+static unsigned long long num_field_lines = DEFAULT_NUM_FIELD_LINES_TO_TRACE;
+static T k_val = DEFAULT_K_VAL;
+
 constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 50;
+
+constexpr ubk::FieldLineParams<T> params = {
+  .innerLim = 1.05,
+  .outterLim = 15.0,
+  .maxStepDotField = 0.01,
+  .failRatio = 2,
+  .maxStepSize = 0.01,
+  .maxStepCount = 10000,
+};
 
 struct Field {
   ubk::Igrf13<T> igrf13;
@@ -20,16 +35,12 @@ struct Field {
 
 };
 
-int main() {
-  constexpr ubk::FieldLineParams<T> params = {
-    .innerLim = 1.05,
-    .outterLim = 15.0,
-    .maxStepDotField = 0.01,
-    .failRatio = 2,
-    .maxStepSize = 0.01,
-    .maxStepCount = 10000,
-  };
-  
+int main(int argc, char** argv) {
+  if (argc == 3) {
+    k_val = std::stod(argv[K_VAL_ARG_IDX]);
+    num_field_lines = std::stoull(argv[NUM_FIELD_LINES_ARG_IDX]);
+  }
+
   ubk::Time time{};
   Field field;
   field.igrf13.setTime(time);
@@ -46,7 +57,7 @@ int main() {
   std::size_t shortFieldLines = 0;
 
   std::size_t i = 0;
-  while(i < NUM_FIELD_LINES_TO_TRACE) {
+  while(i < num_field_lines) {
     auto seed = rng.gen();
     ubk::FieldLine<T, Field, params> fieldLine;
 
@@ -72,8 +83,8 @@ int main() {
     
     std::array<ubk::FieldLine<T, Field, params>::PointInfo, 2> points;
   
-    if (fieldLine.maxLongitudinalInvariant() < K_VAL) continue;
-    points = fieldLine.getPointsWithK(K_VAL);
+    if (fieldLine.maxLongitudinalInvariant() < k_val) continue;
+    points = fieldLine.getPointsWithK(k_val);
 
     std::cout << vec3ToStr(points[0].loc) << '\n';
     std::cout << vec3ToStr(points[1].loc) << '\n';
@@ -81,7 +92,7 @@ int main() {
     i++;
   }
   
-  std::cout << "Valid field lines traced: " << NUM_FIELD_LINES_TO_TRACE << '\n';
+  std::cout << "Valid field lines traced: " << num_field_lines << '\n';
   std::cout << "Total valid points traced: " << totalValidPointsTraced << '\n';
   std::cout << "Bifurcating field lines: " << bifurcatingFieldLines << '\n';
   std::cout << "Short field lines: " << shortFieldLines;
