@@ -22,6 +22,16 @@ static T k_val = DEFAULT_K_VAL;
 static unsigned long long num = DEFAULT_NUM_FIELD_LINES_TO_TRACE;
 static unsigned long thread_count = DEFAULT_THREAD_COUNT;
 
+struct Point {
+  T x; 
+  T y;
+  T B;
+};
+
+static std::vector<Point> m_points;
+
+static_assert(sizeof(Point) == 3 * sizeof(T));
+
 struct Field {
   ubk::Igrf13<T> igrf13;
   ubk::Ts89<T> ts89;
@@ -89,7 +99,7 @@ void worker(SharedResults& results, std::atomic<bool>& done){
 
     {
       std::lock_guard lock(results.mtx);
-      std::cout << seed.x << ',' << seed.y << ',' << points[1].magneticIntensity << '\n';
+      m_points.push_back(Point{.x = seed.x, .y = seed.y, .B = points[1].magneticIntensity});
       results.totalValidPointsTraced += fieldLine.points().size();
       results.validLines++;
       if (results.validLines > num) {
@@ -119,10 +129,12 @@ int main(int argc, char** argv) {
     t.join();
   }
   
-  std::cout << "\nValid field lines traced: " << results.validLines << '\n';
-  std::cout << "Total valid points traced: " << results.totalValidPointsTraced << '\n';
-  std::cout << "Bifurcating field lines: " << results.bifurcatingFieldLines << '\n';
-  std::cout << "Short field lines: " << results.shortFieldLines << '\n';
+  std::ofstream out("points.bin", std::ios::binary);
+
+  out.write(
+    reinterpret_cast<const char*>(m_points.data()),
+    static_cast<std::streamsize>(m_points.size() * sizeof(Point))
+  );
 
   return 0;
 }
