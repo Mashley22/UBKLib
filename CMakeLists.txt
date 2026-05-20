@@ -18,6 +18,15 @@ endif()
 
 if(UBKLIB_SAMPLES)
   add_compile_options(-O3 -march=native -fno-math-errno)
+  if(NOT UBKLIB_PY_SAMPLES)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result)
+    if(result)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+      message(STATUS "IPO / LTO not supported: ${IPO_SUPPORT_REASON}")
+    endif()
+  endif()
 endif()
 
 set(PEDANTIC_COMPILE_OPTIONS
@@ -72,8 +81,10 @@ if(UBKLIB_UNIT_TEST)
 endif()
 
 if(UBKLIB_SAMPLES)
-  set(PYBIND11_FINDPYTHON ON)
-  add_subdirectory(extern/pybind11)
+  if (UBKLIB_PY_SAMPLES)
+    set(PYBIND11_FINDPYTHON ON)
+    add_subdirectory(extern/pybind11)
+  endif(UBKLIB_PY_SAMPLES)
 
   add_subdirectory(samples)
 endif()
