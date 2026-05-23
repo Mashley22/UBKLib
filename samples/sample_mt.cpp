@@ -1,8 +1,8 @@
-#include <iostream>
 #include <thread>
 #include <mutex>
 #include <vector>
 #include <atomic>
+#include <filesystem>
 
 import UBKLib;
 
@@ -10,17 +10,12 @@ import UBKLib;
 #define DEFAULT_K_VAL 100
 #define DEFAULT_THREAD_COUNT 8
 
-#define K_VAL_ARG_IDX 1
-#define NUM_FIELD_LINES_ARG_IDX 2
-#define THREAD_COUNT_ARG_IDX 3
+#define NUM_FIELD_LINES_ARG_IDX 1
+#define THREAD_COUNT_ARG_IDX 2
 
 using T = double;
 
 constexpr std::size_t MIN_FIELD_LINE_POINT_COUNT = 50;
-
-static T k_val = DEFAULT_K_VAL;
-static unsigned long long num = DEFAULT_NUM_FIELD_LINES_TO_TRACE;
-static unsigned long thread_count = DEFAULT_THREAD_COUNT;
 
 struct Point {
   T x; 
@@ -28,9 +23,16 @@ struct Point {
   T B;
 };
 
-static std::vector<Point> m_points;
+struct constKEquatorialSurface {
+  T k_val;
+  std::vector<Point> points;
+};
 
 static_assert(sizeof(Point) == 3 * sizeof(T));
+
+static std::vector<constKEquatorialSurface> m_constKEquatorialSurfaces;
+static unsigned long long num = DEFAULT_NUM_FIELD_LINES_TO_TRACE;
+static unsigned long thread_count = DEFAULT_THREAD_COUNT;
 
 struct Field {
   ubk::Igrf13<T> igrf13;
@@ -44,40 +46,54 @@ struct Field {
 
 struct SharedResults {
   std::mutex mtx;
-  std::size_t totalValidPointsTraced = 0;
-  std::size_t bifurcatingFieldLines = 0;
-  std::size_t shortFieldLines = 0;
   std::size_t validLines = 0;
 };
 
 void worker(SharedResults& results, std::atomic<bool>& done){
   constexpr ubk::FieldLineParams<T> params = {
     .innerLim = 1.05,
-    .outterLim = 15.0,
+    .outterLim = 20.0,
     .maxStepDotField = 0.01,
     .failRatio = 2,
     .maxStepSize = 0.01,
     .maxStepCount = 10000,
   };
   
-  constexpr ubk::Time time{};
+  constexpr ubk::Time time{
+    .year = 1990,
+    .month = 1,
+    .day = 1,
+    .hours = 0,
+    .minutes = 0,
+    .seconds = 0
+  };
   Field field;
   field.igrf13.setTime(time);
   field.ts89.dipole_tilt() = field.igrf13.dipole_tilt();
   field.ts89.setTime(time);
+  field.ts89.iop() = 1;
 
   ubk::FieldLineGenerator<T, Field, params> generator;
   generator.assignModel(field);
 
-  ubk::UniformEquatorGenerator<T> rng(1.0, 15.0);
+  ubk::UniformEquatorGenerator<T> rng(1.0, 16.0);
+
+  std::vector<Point> k_points;
+  k_points.reserve(m_constKEquatorialSurfaces.size());
   
   while(!done.load()) {
+    k_points.resize(0);
     auto seed = rng.gen();
     ubk::FieldLine<T, Field, params> fieldLine;
 
     try {
       fieldLine = generator.generateFieldLine(seed);
     } catch(std::runtime_error& e) {
+      continue;
+    }
+
+    if (fieldLine.points().back().loc.amp() > 1.1 &&
+        fieldLine.points().front().loc.amp() > 1.1) {
       continue;
     }
 
@@ -93,18 +109,28 @@ void worker(SharedResults& results, std::atomic<bool>& done){
       continue;
     }
     
-    if (fieldLine.maxLongitudinalInvariant() < k_val) continue;
-    
-    auto points = fieldLine.getPointsWithK(k_val);
+    for (std::size_t i = 0; i < m_constKEquatorialSurfaces.size(); i++) {
+      if (fieldLine.maxLongitudinalInvariant() < m_constKEquatorialSurfaces[i].k_val) break;
+      
+      auto points = fieldLine.getPointsWithK(m_constKEquatorialSurfaces[i].k_val);
+      k_points.push_back({
+        .x = seed.x,
+        .y = seed.y,
+        .B = points[1].magneticIntensity
+      });
+    }
 
-    {
-      std::lock_guard lock(results.mtx);
-      m_points.push_back(Point{.x = seed.x, .y = seed.y, .B = points[1].magneticIntensity});
-      results.totalValidPointsTraced += fieldLine.points().size();
-      results.validLines++;
-      if (results.validLines > num) {
-        done.store(true);
-      }
+    if (k_points.empty()) continue;
+
+    std::lock_guard lock(results.mtx);
+
+    results.validLines++;
+    if (results.validLines >= num) {
+      done.store(true);
+    }
+
+    for (std::size_t i = 0; i < k_points.size(); i++) {
+      m_constKEquatorialSurfaces[i].points.push_back(k_points[i]);
     }
     
   }
@@ -115,10 +141,17 @@ int main(int argc, char** argv) {
   std::atomic<bool> done{false};
   std::vector<std::thread> threads;
 
-  if (argc == 4) {
-    k_val = std::stod(argv[K_VAL_ARG_IDX]);
+  if (argc >= 3) {
     num = std::stoull(argv[NUM_FIELD_LINES_ARG_IDX]);
     thread_count = std::stoul(argv[THREAD_COUNT_ARG_IDX]);
+
+    for (int i = 3; i < argc; i++) {
+      m_constKEquatorialSurfaces.push_back({.k_val = std::stod(argv[i]), .points = {}});
+    }
+  }
+
+  if (m_constKEquatorialSurfaces.empty()) {
+    m_constKEquatorialSurfaces.push_back({.k_val = DEFAULT_K_VAL, .points = {}});
   }
   
   for (std::size_t t = 0; t < thread_count; t++) {
@@ -128,13 +161,21 @@ int main(int argc, char** argv) {
   for (auto& t : threads) {
     t.join();
   }
-  
-  std::ofstream out("points.bin", std::ios::binary);
 
-  out.write(
-    reinterpret_cast<const char*>(m_points.data()),
-    static_cast<std::streamsize>(m_points.size() * sizeof(Point))
-  );
+  std::filesystem::create_directories("data");
+
+  for (const auto& surface : m_constKEquatorialSurfaces) {
+
+    auto filename = "data/" + std::to_string(surface.k_val) + ".bin";
+  
+    std::ofstream out(filename, std::ios::binary);
+
+    out.write(
+      reinterpret_cast<const char*>(surface.points.data()),
+      static_cast<std::streamsize>(surface.points.size() * sizeof(Point))
+    );
+
+  }
 
   return 0;
 }
