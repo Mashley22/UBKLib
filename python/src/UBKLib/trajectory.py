@@ -68,7 +68,6 @@ def __continuous_lcds_ub_min_intercept(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         trajectory: Callable[[float], float],
-        charge: int, 
         B_bounds: tuple[float, float]
 ) -> float:
 
@@ -101,7 +100,6 @@ def __continuous_lcds_ub_max_intercept(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         trajectory: Callable[[float], float],
-        charge: int, 
         B_bounds: tuple[float, float]
 ) -> float:
 
@@ -130,11 +128,10 @@ def __continuous_lcds_ub_max_intercept(
     return min(-lower_result.fun, -upper_result.fun)
 
 
-def __continuous_lcds_ub_trajectory(
+def __continuous_ub_trajectory(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         trajectory: Callable[[float], float],
-        charge: int,
         intercept: float,
         B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 ** 3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
 ) -> UBTrajectory:
@@ -184,7 +181,6 @@ def continuous_lcds_ub_trajectory(
         lower_contour: W0ContourFunction,
         upper_contour: W0ContourFunction,
         trajectory: Callable[[float], float],
-        charge: int,
         B_bounds: tuple[float, float] = (dipole.SURFACE_STRENGTH / (15 ** 3), dipole.SURFACE_STRENGTH / (1.05 ** 3))
 ) -> UBTrajectory:
     """Calculates the the LCDS trajectory for a particle with a given trajectory, charge
@@ -202,11 +198,11 @@ def continuous_lcds_ub_trajectory(
     Returns:
         The trajectory information
     """
-    minIntercept = __continuous_lcds_ub_min_intercept(lower_contour, upper_contour, trajectory, charge, B_bounds)
-    maxIntercept = __continuous_lcds_ub_max_intercept(lower_contour, upper_contour, trajectory, charge, B_bounds)
+    minIntercept = __continuous_lcds_ub_min_intercept(lower_contour, upper_contour, trajectory, B_bounds)
+    maxIntercept = __continuous_lcds_ub_max_intercept(lower_contour, upper_contour, trajectory, B_bounds)
 
-    minTrajectory = __continuous_lcds_ub_trajectory(lower_contour, upper_contour, trajectory, charge, minIntercept, B_bounds)
-    maxTrajectory = __continuous_lcds_ub_trajectory(lower_contour, upper_contour, trajectory, charge, maxIntercept, B_bounds)
+    minTrajectory = __continuous_ub_trajectory(lower_contour, upper_contour, trajectory, minIntercept, B_bounds)
+    maxTrajectory = __continuous_ub_trajectory(lower_contour, upper_contour, trajectory, maxIntercept, B_bounds)
 
     if minTrajectory.lower_intercept.B < maxTrajectory.lower_intercept.B:
         return minTrajectory
