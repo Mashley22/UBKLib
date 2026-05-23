@@ -78,4 +78,4 @@ def generate_inv_cuberoot_bins(
     
     B_edges = 1.0 / inv_cbrt_edges**3
     
-    return B_edges
+    return np.sort(B_edges)

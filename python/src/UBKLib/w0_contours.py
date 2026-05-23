@@ -209,7 +209,8 @@ def parse_upper_contour_w0_points(
 
 
 def generate_ub_spline(
-        turning_points: List[TurningPoint]
+        turning_points: List[TurningPoint],
+        s: float = 0
 ) -> BSpline:
     """Computes and returns the cubic spline for the turing points as a function U(B)
     """
@@ -218,11 +219,12 @@ def generate_ub_spline(
     df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.U for x in sorted_list]})
     grouped = df.groupby('x')['y'].mean().reset_index()
 
-    return make_splrep(grouped['x'].values, grouped['y'].values, s=grouped.size)
+    return make_splrep(grouped['x'].values, grouped['y'].values, s=s)
 
 
 def generate_realSpace_splines(
-        turning_points: List[TurningPoint]
+        turning_points: List[TurningPoint],
+        s: float = 0
 ) -> tuple[BSpline, BSpline]:
     """Computes and returns the cubic splines for the x(B) and y(B) respectively
     """
@@ -234,12 +236,12 @@ def generate_realSpace_splines(
     df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.x for x in sorted_list]})
     grouped = df.groupby('x')['y'].mean().reset_index()
 
-    retVal.append(make_splrep(grouped['x'].values, grouped['y'].values, s=grouped.size))
+    retVal.append(make_splrep(grouped['x'].values, grouped['y'].values, s=s))
 
     df = pd.DataFrame({'x': [x.B for x in sorted_list], 'y': [x.y for x in sorted_list]})
     grouped = df.groupby('x')['y'].mean().reset_index()
 
-    retVal.append(make_splrep(grouped['x'].values, grouped['y'].values, s=grouped.size))
+    retVal.append(make_splrep(grouped['x'].values, grouped['y'].values, s=s))
 
     return retVal
 
@@ -426,5 +428,5 @@ def w0_points_from_cloud(
                     U=U_lo_std
                 )
             ))
-    
+
     return upper_extrema, lower_extrema
