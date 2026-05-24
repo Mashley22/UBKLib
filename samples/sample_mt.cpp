@@ -54,15 +54,15 @@ void worker(SharedResults& results, std::atomic<bool>& done){
     .innerLim = 1.05,
     .outterLim = 20.0,
     .maxStepDotField = 0.01,
-    .failRatio = 2,
-    .maxStepSize = 0.01,
-    .maxStepCount = 10000,
+    .failRatio = 5,
+    .maxStepSize = 0.005,
+    .maxStepCount = 50000,
   };
   
   constexpr ubk::Time time{
-    .year = 1990,
-    .month = 1,
-    .day = 1,
+    .year = 2010,
+    .month = 2,
+    .day = 15,
     .hours = 0,
     .minutes = 0,
     .seconds = 0
@@ -71,7 +71,7 @@ void worker(SharedResults& results, std::atomic<bool>& done){
   field.igrf13.setTime(time);
   field.ts89.dipole_tilt() = field.igrf13.dipole_tilt();
   field.ts89.setTime(time);
-  field.ts89.iop() = 1;
+  field.ts89.iop() = 0;
 
   ubk::FieldLineGenerator<T, Field, params> generator;
   generator.assignModel(field);
@@ -141,11 +141,11 @@ int main(int argc, char** argv) {
   std::atomic<bool> done{false};
   std::vector<std::thread> threads;
 
-  if (argc >= 3) {
+  if (argc >= THREAD_COUNT_ARG_IDX + 1) {
     num = std::stoull(argv[NUM_FIELD_LINES_ARG_IDX]);
     thread_count = std::stoul(argv[THREAD_COUNT_ARG_IDX]);
 
-    for (int i = 3; i < argc; i++) {
+    for (int i = THREAD_COUNT_ARG_IDX + 1; i < argc; i++) {
       m_constKEquatorialSurfaces.push_back({.k_val = std::stod(argv[i]), .points = {}});
     }
   }
@@ -164,15 +164,21 @@ int main(int argc, char** argv) {
 
   std::filesystem::create_directories("data");
 
-  for (const auto& surface : m_constKEquatorialSurfaces) {
+  for (std::size_t i = 0; i < m_constKEquatorialSurfaces.size(); i++) {
+    
+    std::string filename{};
+    if (argc > THREAD_COUNT_ARG_IDX + 1) {
+      filename = "data/" + std::string(argv[i + THREAD_COUNT_ARG_IDX]) + ".bin"; 
+    }
+    else {
+      filename = "data/data.bin";
+    }
 
-    auto filename = "data/" + std::to_string(surface.k_val) + ".bin";
-  
     std::ofstream out(filename, std::ios::binary);
 
     out.write(
-      reinterpret_cast<const char*>(surface.points.data()),
-      static_cast<std::streamsize>(surface.points.size() * sizeof(Point))
+      reinterpret_cast<const char*>(m_constKEquatorialSurfaces[i].points.data()),
+      static_cast<std::streamsize>(m_constKEquatorialSurfaces[i].points.size() * sizeof(Point))
     );
 
   }
