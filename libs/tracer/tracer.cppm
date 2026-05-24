@@ -312,9 +312,9 @@ private:
   
   template<FillDirection direc>
   [[nodiscard]] std::optional<Vector3<Re<T>>>
-  takeStep_(Vector3<Re<T>> loc, Vector3<nanoTesla<T>> field, nanoTesla<T> fieldIntensity) {
-    T h = Params.maxStepSize;
-    field = field / fieldIntensity;
+  takeStep_(Vector3<Re<T>> loc, Vector3<nanoTesla<T>> field, Re<T> prevStepSize = Params.maxStepSize) {
+    T h = prevStepSize;
+    field = field.normalised();
     if constexpr (direc == FillDirection::BACKWARD) {
       h = -1 * h;
     }
@@ -323,7 +323,7 @@ private:
       Vector3<Re<T>> step = h * (field + m_fieldModel.getField(loc + h * field)).normalised();
       Vector3<Re<T>> newLoc = step + loc;
       if (validStep_(newLoc)) {
-        return newLoc;
+        return step;
       }
       else if (step.ampSquared() < (Params.minStepSize() * Params.minStepSize())) {
         return std::nullopt;
@@ -356,29 +356,29 @@ private:
       .magneticIntensity = field.amp(),
     };
 
-    std::optional<Vector3<Re<T>>> nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
+    std::optional<Vector3<Re<T>>> nextStep = takeStep_<direc>(point.loc, field);
 
-    if (!nextLoc.has_value()) {
+    if (!nextStep.has_value()) {
       throw std::runtime_error("Couldn't even take one step!");
     }
 
-    auto assignPoint = [&](const std::optional<Vector3<Re<T>>>& next) {
-      point.loc = next.value();
+    auto assignPoint = [&](std::optional<Vector3<Re<T>>> step) {
+      point.loc = step.value() + point.loc;
       field = m_fieldModel.getField(point.loc);
       point.magneticIntensity = field.amp();
       
       buf_<direc>().push_back(point);
     };
 
-    assignPoint(nextLoc);
+    assignPoint(nextStep);
     
     for (std::size_t i = 0; i < Params.maxStepCount; i++) {
-      nextLoc = takeStep_<direc>(point.loc, field, point.magneticIntensity);
-      if (!nextLoc.has_value()) {
+      nextStep = takeStep_<direc>(point.loc, field, nextStep.value().amp());
+      if (!nextStep.has_value()) {
         return;
       }
       
-      assignPoint(nextLoc);
+      assignPoint(nextStep);
     }
   }
 
