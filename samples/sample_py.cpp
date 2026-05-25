@@ -24,8 +24,8 @@ constexpr ubk::FieldLineParams<T> params = {
 };
 
 constexpr ubk::Time simTime {
-  .year = 1960, 
-  .month = 1,
+  .year = 2010, 
+  .month = 2,
   .day = 15,
 };
 
@@ -43,9 +43,9 @@ struct Field {
 ubk::FieldLineGenerator<T, Field, params> generator;
 
 static std::optional<ubk::Vector3<ubk::Re<T>>> 
-gsmToGeo(ubk::Vector3<ubk::Re<T>> gsm) {
+smToGeo(ubk::Vector3<ubk::Re<T>> sm) {
   std::array<T, 3> geo;
-  if (cxform2(GSM, GEO, static_cast<double>(ubk::timeToEs(simTime)), gsm.toArr().data(), geo.data()) != 0) {
+  if (cxform2(SM, GEO, static_cast<double>(ubk::timeToEs(simTime)), sm.toArr().data(), geo.data()) != 0) {
     return std::nullopt;
   }
   return std::make_optional(ubk::Vector3<ubk::Re<T>>::fromArr(geo));
@@ -53,8 +53,8 @@ gsmToGeo(ubk::Vector3<ubk::Re<T>> gsm) {
 
 }
 
-T
-calculateB(T x, T y, T k) {
+py::list
+calculateB(T x, T y, py::list k_vals) {
   Field field;
   field.igrf13.setTime(simTime);
   field.ts89.dipole_tilt() = field.igrf13.dipole_tilt();
@@ -62,32 +62,49 @@ calculateB(T x, T y, T k) {
 
   generator.assignModel(field);
 
-  ubk::Vector3<ubk::Re<T>> gsm{x, y, 0};
-  auto geo = gsmToGeo(gsm);
+  ubk::Vector3<ubk::Re<T>> sm{x, y, 0};
+  auto geo = smToGeo(sm);
+
+  py::list retVal;
+
+  const auto& invalid_field_line = [&]() {
+    for (std::size_t i = 0; i < k_vals.size(); i++) {
+      retVal.append(std::numeric_limits<T>::quiet_NaN());
+    }
+    return retVal;
+  };
 
   if (!geo.has_value()) {
-    return std::numeric_limits<T>::quiet_NaN();
+    return invalid_field_line();
   }
   
   ubk::FieldLine<T, Field, params> fieldLine;
   try {
     fieldLine = generator.generateFieldLine(geo.value());
   } catch(...) {
-    return std::numeric_limits<T>::quiet_NaN();
+    return invalid_field_line();
   }
  
   try {
     ubk::calculateLongitudinalInvariants(fieldLine);
   } catch(...) {
-    return std::numeric_limits<T>::quiet_NaN();
+    return invalid_field_line();
   }
 
-  auto val = fieldLine.getPointsWithK(k);
-
-  return val[1].magneticIntensity;
+  for (const auto& k : k_vals) {
+    T k_value = k.cast<T>();
+    if (k_value > fieldLine.maxLongitudinalInvariant()) {
+      retVal.append(std::numeric_limits<T>::quiet_NaN());
+    }
+    else {
+      retVal.append(fieldLine.getPointsWithK(k.cast<T>())[1].magneticIntensity);
+    }
+  }
+  
+  return retVal;
 }
 
 PYBIND11_MODULE(UBKLibpp, m) {
   m.def("calculateB", &calculateB, 
-    "Calculates B for a K value on a field line with a given equatorial point");
+    "Calculates B for a K value(s) on a field line with a given equatorial point");
 }
