@@ -12,12 +12,8 @@ from .types import (
     TurningPoint,
     TurningPointType,
     MagneticAmplitudeFunction,
-    PotentialFunction,
     TurningPointWithErrors
 )
-
-from .equipotentials import generate_equipotentials
-
 
 SINGULAR_VAL = 1e-12
 
@@ -244,75 +240,6 @@ def generate_realSpace_splines(
     retVal.append(make_splrep(grouped['x'].values, grouped['y'].values, s=s))
 
     return retVal
-
-
-def find_w0_points_in_region(
-        x_bounds: tuple[float, float],
-        y_bounds: tuple[float, float],
-        potential_levels: List[float],
-        magnetic_amplitude_func: MagneticAmplitudeFunction,
-        electric_potential_func: PotentialFunction,
-        final_resolution: int,
-        initial_resolution: int,
-) -> tuple[List[TurningPoint], List[TurningPoint]]:
-    """
-    Calculates and finds any of the W = 0 points in a specific region 
-    for the given parameters, first testing at a lower resolution, then 
-    if atelast one W = 0 point is found, calculations are redone using a higher
-    resolution. This relies on the fact that lower resolutions tend to false positive
-
-    Args:
-        x_bounds (Re): the x_bounds to search within
-        y_bounds (Re): the y_bounds to search within
-        potential_levels (keV): a list of the potential levels to search for
-        magnetic_ampltidue_func: returns the B assosciated with the 
-                                 equatorial position
-        electric_potential_func: returns the U assosciated with the 
-                                 equatorial position
-        initial_resolution: the grid sidelength to use for inital probing.
-                            set to 0 to not do the initial probing
-        final_resolution: the grid sidelength to use to generate the
-                          equipotential contours if a positive is triggered 
-
-    Returns:
-        a tuple of lists of the W = 0 points found at the high resolution,
-        the first list is the lower contour points, the second the upper contour
-        points
-    """
-
-    if initial_resolution is not None:
-        initial_contours = generate_equipotentials(
-            electric_potential_func,
-            potential_levels,
-            x_bounds,
-            y_bounds,
-            initial_resolution
-        )
-        
-        intial_w0_points = contour_w0_points(initial_contours, magnetic_amplitude_func)
-
-        if not any(item for sublist1 in intial_w0_points for sublist2 in sublist1 for item in sublist2):
-            return ([], [])
-        
-    final_contours = generate_equipotentials(
-        electric_potential_func,
-        potential_levels,
-        x_bounds,
-        y_bounds,
-        final_resolution
-    )
-
-    final_w0_points = contour_w0_points(final_contours, magnetic_amplitude_func)
-
-    for i in range(len(potential_levels)):
-        for j in range(len(final_w0_points[i])):
-            for ele in final_w0_points[i][j]:
-                ele.U = potential_levels[i]
-
-    return (
-        parse_lower_contour_w0_points(final_w0_points),
-        parse_upper_contour_w0_points(final_w0_points)
-    )
 
 
 def w0_points_from_cloud(

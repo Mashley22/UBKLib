@@ -4,6 +4,7 @@ import numpy.typing as npt
 import numpy as np
 from dataclasses import dataclass
 from enum import Enum
+from typing import List
 
 Vectorizable = Union[float, npt.NDArray[np.float64]]
 
@@ -29,6 +30,19 @@ MagneticAmplitudeFunction = Callable[
         float
     ],
     float
+]
+
+"""
+inputs are x, y in solar magnetic coordinates AND a list of k values
+the return value is the magnetic intensity at each k value
+"""
+MagneticAmplitudeFunctionWithK = Callable[
+    [
+        float,
+        float,
+        List[float]
+    ],
+    List[float]
 ]
 
 W0ContourFunction = Callable[

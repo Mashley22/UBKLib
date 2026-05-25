@@ -4,7 +4,14 @@ from .field_models import (
     equatorial_dipole_amplitude
 )
 
-from .equipotentials import generate_equipotentials
+from .grid import (
+    Grid
+)
+
+from .equipotentials import (
+    generate_equipotentials
+)
+
 from .trajectory import ( 
     continuous_lcds_ub_trajectory,
     classical_ub_trajectory,
@@ -17,6 +24,5 @@ from .w0_contours import (
     parse_upper_contour_w0_points,
     generate_ub_spline,
     generate_realSpace_splines,
-    find_w0_points_in_region,
     w0_points_from_cloud
 )

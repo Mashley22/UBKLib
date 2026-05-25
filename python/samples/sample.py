@@ -1,44 +1,23 @@
-import numpy as np
-import matplotlib.pyplot as plt
-
 import UBKLibpp
 import UBKLib
+import matplotlib.pyplot as plt
+
+K_VALUES = [1, 10, 100, 1000]
 
 
-def getMagneticAmplitude(x, y):
-    return UBKLibpp.calculateB(x, y, 1)
+def POTENTIAL(x, y):
+    return UBKLib.volland_stern_potential(x, y, kp=0)
 
 
-potential_levels = np.linspace(-100, 100, 100)
-
-equipotentials = UBKLib.generate_equipotentials(
-    UBKLib.cross_tail_potential, 
-    potential_levels,
-    x_bounds=(-15.0, 15.0),
-    y_bounds=(-15.0, 15.0),
-    resolution=1000
+grid = UBKLib.Grid(
+    K_VALUES,
+    POTENTIAL,
+    UBKLibpp.calculateB,
+    resolution=100
 )
 
-w0_points = UBKLib.contour_w0_points(equipotentials, getMagneticAmplitude)
-
-upper_points = UBKLib.parse_upper_contour_w0_points(w0_points)
-lower_points = UBKLib.parse_lower_contour_w0_points(w0_points)
-
-plt.figure(figsize=(10, 10))
-
-for level_idx, level_contours in enumerate(equipotentials):
-    for contour in level_contours:
-        plt.plot(contour[:, 0], contour[:, 1], 'b-', linewidth=0.5, alpha=0.5)
-
-for point in upper_points:
-    plt.plot(point.x, point.y, 'x', color='red')
-
-for point in lower_points:
-    plt.plot(point.x, point.y, 'x', color='blue')
-
-plt.xlabel('X')
-plt.ylabel('Y')
-plt.title('Equipotential Contours')
-plt.grid(True, alpha=0.3)
-plt.axis('equal')  # Keep aspect ratio square
-plt.show()
+if __name__ == "__main__":
+    grid.calc_potential_grid()
+    grid.calc_magnetic_amp_grid_parallel()
+    plt.plot(grid.magnetic_amp_grids[0].flatten(), grid.potential_grid.flatten(), '^', alpha=0.1)
+    plt.show()
