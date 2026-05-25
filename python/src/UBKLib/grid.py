@@ -173,3 +173,69 @@ class Grid:
                         self.__magnetic_amp_grids[k_idx][row_idx, :] = row_data[k_idx]
                 except Exception as e:
                     print(f"Error processing row {row_idx}: {e}")
+
+    def save(self, filepath: str) -> None:
+        """
+        Save grid data to a .npz file.
+        
+        Parameters:
+        -----------
+        filepath : str
+            Path to save the file (without extension, .npz will be added).
+        """
+        if not filepath.endswith('.npz'):
+            filepath += '.npz'
+        
+        save_dict = {
+            'x_grid': self.__x_grid,
+            'y_grid': self.__y_grid,
+            'potential_grid': self.__potential_grid,
+            'valid_mask': self.__valid_mask,
+            'k_values': np.array(self.__k_values),
+            'x_bounds': np.array(self.__x_bounds),
+            'y_bounds': np.array(self.__y_bounds),
+        }
+        
+        for k_idx, grid in enumerate(self.__magnetic_amp_grids):
+            save_dict[f'magnetic_amp_grid_{k_idx}'] = grid
+        
+        np.savez_compressed(filepath, **save_dict)
+
+    @classmethod
+    def load(cls, filepath: str) -> 'Grid':
+        """
+        Load grid data from a .npz file. Note: This restores the data grids
+        but the potential_func and magnetic_amp_func must be provided separately.
+        
+        Parameters:
+        -----------
+        filepath : str
+            Path to the .npz file.
+            
+        Returns:
+        --------
+        Grid
+            A Grid instance with restored data but dummy functions.
+        """
+        if not filepath.endswith('.npz'):
+            filepath += '.npz'
+        
+        data = np.load(filepath)
+        
+        grid = cls(
+            k_values=data['k_values'].tolist(),
+            potential_func=None,
+            magnetic_amp_func=None,
+            x_bounds=tuple(data['x_bounds']),
+            y_bounds=tuple(data['y_bounds']),
+            resolution=data['x_grid'].shape[0]
+        )
+        
+        grid.__potential_grid = data['potential_grid']
+        
+        k_idx = 0
+        while f'magnetic_amp_grid_{k_idx}' in data:
+            grid.__magnetic_amp_grids[k_idx] = data[f'magnetic_amp_grid_{k_idx}']
+            k_idx += 1
+        
+        return grid
