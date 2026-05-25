@@ -9,10 +9,14 @@ from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor
 )
+from skimage import measure
+from scipy.interpolate import RegularGridInterpolator
 
 from .types import (
     PotentialFunction,
-    MagneticAmplitudeFunctionWithK
+    MagneticAmplitudeFunctionWithK,
+    TurningPoint,
+    TurningPointType
 )
 
 
@@ -60,6 +64,7 @@ class Grid:
     __y_grid: npt.NDArray[np.float64]
     __potential_grid: npt.NDArray[np.float64]
     __magnetic_amp_grids: List[npt.NDArray[np.float64]]
+    __cross_product_grids: List[npt.NDArray[np.float64]]
     __valid_mask: npt.NDArray[np.bool]
     __INVALID_RADIUS: float = 1.05
 
@@ -81,15 +86,36 @@ class Grid:
         self.__init_real_space_grid(x_bounds, y_bounds, resolution)
         self.__init_field_grids(len(k_values))
 
+    def __grid_sides(
+            self,
+            bounds: Tuple[float, float],
+            resolution: int
+    ) -> npt.NDArray[np.float64]:
+        return np.linspace(bounds[0], bounds[1], resolution, endpoint=True, dtype=np.float64)
+
+    def __x_vals(
+            self,
+            bounds: Tuple[float, float],
+            resolution: int
+    ) -> npt.NDArray[np.float64]:
+        return self.__grid_sides(bounds, resolution)
+
+    def __y_vals(
+            self,
+            bounds: Tuple[float, float],
+            resolution: int
+    ) -> npt.NDArray[np.float64]:
+        return self.__grid_sides(bounds, resolution)
+
     def __init_real_space_grid(
             self, 
             x_bounds: Tuple[float, float],
             y_bounds: Tuple[float, float],
             resolution: int,
     ) -> None:
-
-        x_vals = np.linspace(x_bounds[0], x_bounds[1], resolution, dtype=np.float64)
-        y_vals = np.linspace(y_bounds[0], y_bounds[1], resolution, dtype=np.float64)
+            
+        x_vals = self.__x_vals(x_bounds, resolution)
+        y_vals = self.__y_vals(y_bounds, resolution)
         self.__x_grid, self.__y_grid = np.meshgrid(x_vals, y_vals)
         r = np.hypot(self.__x_grid, self.__y_grid)
         self.__valid_mask = (r >= self.__INVALID_RADIUS)
@@ -110,6 +136,14 @@ class Grid:
         )
     
     @property
+    def x_grid(self) -> npt.NDArray[np.float64]:
+        return self.__x_grid
+
+    @property
+    def y_grid(self) -> npt.NDArray[np.float64]:
+        return self.__y_grid
+
+    @property
     def potential_func(self) -> PotentialFunction:
         return self.__potential_func
 
@@ -128,6 +162,63 @@ class Grid:
     @property
     def magnetic_amp_grids(self) -> List[npt.NDArray[np.float64]]:
         return self.__magnetic_amp_grids
+
+    def calc_cross_products(self) -> None:
+        self.__cross_product_grids = []
+        du_y, du_x = np.gradient(self.__potential_grid)
+
+        for grid in self.__magnetic_amp_grids:
+            db_y, db_x = np.gradient(grid)
+            self.__cross_product_grids.append(
+                np.multiply(du_x, db_y) - np.multiply(du_y, db_x)
+            )
+
+    def find_cross_product_zeros(self) -> List[List[TurningPoint]]:
+        interp_pot_grid = RegularGridInterpolator(
+            (self.__x_grid[0, :], self.__y_grid[:, 1]),
+            self.__potential_grid,
+            bounds_error=False, 
+            fill_value=np.nan
+        )
+
+        retVal = []
+
+        for j, grid in enumerate(self.__cross_product_grids):
+            temp = []
+            contours = measure.find_contours(grid, level=0)
+
+            for contour in contours:
+                if len(contour) < self.__x_grid.shape[0] / 10:
+                    continue
+
+                interp = RegularGridInterpolator(
+                    (self.__x_grid[0, :], self.__y_grid[:, 1]),
+                    self.magnetic_amp_grids[j],
+                    bounds_error=False, 
+                    fill_value=np.nan
+                )
+
+                x_vals = np.interp(
+                    contour[:, 1],
+                    [0, self.__x_grid.shape[0] - 1],
+                    [self.__x_bounds[0], self.__x_bounds[1]]
+                )
+                y_vals = np.interp(
+                    contour[:, 0],
+                    [0, self.__y_grid.shape[0] - 1],
+                    [self.__y_bounds[0], self.__y_bounds[1]]
+                )
+                temp.append([TurningPoint(
+                    type=TurningPointType.MAXIMUM,
+                    x=x_vals[i],
+                    y=y_vals[i],
+                    B=interp((y_vals[i], x_vals[i])),
+                    U=interp_pot_grid((y_vals[i], x_vals[i]))
+                ) for i in range(contour.shape[0])])
+
+            retVal.append(temp)
+
+        return retVal
 
     def calc_magnetic_amp_grid_parallel(
             self, 

@@ -3,6 +3,7 @@ import UBKLib
 import matplotlib.pyplot as plt
 import argparse
 import multiprocessing as mp
+import numpy as np
 
 K_VALUES = [1, 10, 100, 1000]
 RESOLUTION = 1000
@@ -37,7 +38,18 @@ def load_data(filepath):
 
 
 def plot():
-    plt.plot(grid.magnetic_amp_grids[0].flatten(), grid.potential_grid.flatten(), '^', alpha=0.1)
+    k_idx = 0
+    grid.calc_cross_products()
+    w0_contours = grid.find_cross_product_zeros()[k_idx]
+    plt.plot(grid.magnetic_amp_grids[k_idx].flatten(), grid.potential_grid.flatten(), '^', alpha=0.01, color='grey')
+    for contour in w0_contours:
+        plt.plot([x.B for x in contour], [x.U for x in contour])
+    plt.show()
+    for contour in w0_contours:
+        plt.plot([x.x for x in contour], [x.y for x in contour])
+
+    mask = ~np.isnan(grid.magnetic_amp_grids[k_idx])
+    plt.plot(grid.x_grid[mask], grid.y_grid[mask], '^', alpha=0.01, color='grey')
     plt.show()
 
 
