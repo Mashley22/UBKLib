@@ -5,7 +5,8 @@ from .field_models import (
 )
 
 from .grid import (
-    Grid
+    FullGrid,
+    GridWithInterp
 )
 
 from .equipotentials import (
@@ -15,7 +16,9 @@ from .equipotentials import (
 from .trajectory import ( 
     continuous_lcds_ub_trajectory,
     classical_ub_trajectory,
-    relativistic_ub_trajectory
+    relativistic_ub_trajectory,
+    relatavistic_hamiltonian,
+    classical_hamiltonian
 )
 from .w0_contours import (
     single_contour_w0_points,

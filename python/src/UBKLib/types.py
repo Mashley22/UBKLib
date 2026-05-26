@@ -52,6 +52,18 @@ W0ContourFunction = Callable[
     Vectorizable
 ]
 
+"""
+First input is the array of magnetic field intensity,
+second is the electric potential.
+"""
+HamiltonianFunction = Callable[
+    [
+        Vectorizable,
+        Vectorizable
+    ],
+    Vectorizable
+]
+
 
 @dataclass
 class UBCoord:

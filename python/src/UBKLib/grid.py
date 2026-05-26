@@ -16,8 +16,19 @@ from .types import (
     PotentialFunction,
     MagneticAmplitudeFunctionWithK,
     TurningPoint,
-    TurningPointType
+    TurningPointType,
+    HamiltonianFunction,
+    Vectorizable
 )
+
+
+def _is_closed(contour):
+    return np.array_equal(contour[0], contour[-1])
+
+
+def _includes_centre(contour, grid_size):
+    halfway = np.array([np.array([grid_size / 2, grid_size / 2])])
+    return measure.points_in_poly(halfway, contour)
 
 
 def _process_row(
@@ -52,7 +63,38 @@ def _process_row(
     return row_data
 
 
-class Grid:
+class GridWithInterp:
+    __discrete_grid: npt.NDArray[np.float64]
+    __interp_grid: RegularGridInterpolator
+
+    def __init__(
+            self,
+            discrete_grid: npt.NDArray[np.float64],
+            x_vals: npt.NDArray[np.float64],
+            y_vals: npt.NDArray[np.float64]
+    ):
+        self.__discrete_grid = discrete_grid
+        self.__interp_grid = RegularGridInterpolator(
+            (x_vals, y_vals),
+            self.__discrete_grid,
+            bounds_error=False,
+            fill_value=np.nan
+        )
+
+    @property
+    def discrete(self) -> npt.NDArray[np.float64]:
+
+        return self.__discrete_grid
+
+    def __call__(
+            self,
+            x: float, 
+            y: float
+    ) -> float:
+        return self.__interp_grid((y, x))
+
+
+class FullGrid:
     
     __x_bounds: Tuple[float, float]
     __y_bounds: Tuple[float, float]
@@ -62,9 +104,10 @@ class Grid:
 
     __x_grid: npt.NDArray[np.float64]
     __y_grid: npt.NDArray[np.float64]
-    __potential_grid: npt.NDArray[np.float64]
-    __magnetic_amp_grids: List[npt.NDArray[np.float64]]
+    __potential_grid: GridWithInterp
+    __magnetic_amp_grids: List[GridWithInterp]
     __cross_product_grids: List[npt.NDArray[np.float64]]
+    __hamiltonian_grids: List[npt.NDArray[np.float64]]
     __valid_mask: npt.NDArray[np.bool]
     __INVALID_RADIUS: float = 1.05
 
@@ -84,7 +127,6 @@ class Grid:
         self.__k_values = k_values.copy()
 
         self.__init_real_space_grid(x_bounds, y_bounds, resolution)
-        self.__init_field_grids(len(k_values))
 
     def __grid_sides(
             self,
@@ -120,19 +162,16 @@ class Grid:
         r = np.hypot(self.__x_grid, self.__y_grid)
         self.__valid_mask = (r >= self.__INVALID_RADIUS)
 
-    def __init_field_grids(
-            self,
-            num_k_values: int
-    ) -> None:
-        self.__potential_grid = np.full_like(self.__x_grid, np.nan, dtype=np.float64)
-        self.__magnetic_amp_grids = [
-            np.full_like(self.__x_grid, np.nan, dtype=np.float64) for _ in range(num_k_values)
-        ]
-
     def calc_potential_grid(self) -> None:
-        self.__potential_grid[self.__valid_mask] = self.__potential_func(
+        potential_grid = np.full_like(self.__x_grid, np.nan, dtype=np.float64)
+        potential_grid[self.__valid_mask] = self.__potential_func(
             self.__x_grid[self.__valid_mask],
             self.__y_grid[self.__valid_mask]
+        )
+        self.__potential_grid = GridWithInterp(
+            potential_grid,
+            self.__x_grid[0, :],
+            self.__y_grid[:, 1]
         )
     
     @property
@@ -153,33 +192,115 @@ class Grid:
             new_potential_func: PotentialFunction
     ) -> None:
         self.__potential_func = new_potential_func
-        self.__potential_grid.fill(np.nan)
+        self.__potential_grid = None
 
     @property
-    def potential_grid(self) -> npt.NDArray[np.float64]:
+    def potential_grid(self) -> GridWithInterp:
         return self.__potential_grid
 
     @property
-    def magnetic_amp_grids(self) -> List[npt.NDArray[np.float64]]:
+    def magnetic_amp_grids(self) -> List[GridWithInterp]:
         return self.__magnetic_amp_grids
 
-    def calc_cross_products(self) -> None:
+    def calc_cross_products_grids(self) -> None:
         self.__cross_product_grids = []
-        du_y, du_x = np.gradient(self.__potential_grid)
+        du_y, du_x = np.gradient(self.__potential_grid.discrete)
 
         for grid in self.__magnetic_amp_grids:
-            db_y, db_x = np.gradient(grid)
+            db_y, db_x = np.gradient(grid.discrete)
             self.__cross_product_grids.append(
                 np.multiply(du_x, db_y) - np.multiply(du_y, db_x)
             )
 
-    def find_cross_product_zeros(self) -> List[List[TurningPoint]]:
-        interp_pot_grid = RegularGridInterpolator(
-            (self.__x_grid[0, :], self.__y_grid[:, 1]),
-            self.__potential_grid,
-            bounds_error=False, 
-            fill_value=np.nan
+    def calc_hamiltonian_grids(self, hamiltonian_func: HamiltonianFunction) -> None:
+        self.__hamiltonian_grids = []
+
+        for grid in self.__magnetic_amp_grids:
+            self.__hamiltonian_grids.append(
+                hamiltonian_func(
+                    grid.discrete,
+                    self.__potential_grid.discrete
+                )
+            )
+
+    def __find_closed_contour(
+        self,
+        grid: npt.NDArray[np.float64],
+        level
+    ) -> None:
+        contours = measure.find_contours(grid, level)
+
+        for contour in contours:
+            if _is_closed(contour) and (len(contour) > self.__x_grid.shape[0] / 10):
+                if _includes_centre(contour, grid.shape[0]):
+                    return contour
+
+        return None
+
+    def __contour_level_search_step(
+        self,
+        grid: npt.NDArray[np.float64],
+        level_closed: float,
+        level_open: float
+    ) -> Tuple[float, float]:
+
+        new_level = (level_closed + level_open) / 2
+
+        res = self.__find_closed_contour(grid, new_level)
+        
+        if res is None:
+            return (level_closed, new_level)
+        else:
+            return (new_level, level_open)
+
+    def __find_initial_levels(
+        self,
+        grid: npt.NDArray[np.float64],
+        charge: float,
+    ) -> Tuple[float, float]:
+
+        valid_data = grid[~np.isnan(grid)]
+        lo, hi = np.min(valid_data), np.max(valid_data)
+
+        delta = -(hi - lo) / 100 * charge
+
+        mid = (lo + hi) / 2
+
+        for i in range(100):
+            
+            mid_closed = (self.__find_closed_contour(grid, mid) is not None)
+
+            if mid_closed is True:
+                break
+
+            mid_closed = mid_closed + delta
+
+        if mid_closed is False:
+            raise ValueError("Implementation error, could not find suitable starting value for H contours")
+        
+        if charge > 0:
+            return (mid, lo)
+        else:
+            return (mid, hi)
+
+    def __interp_contour(
+            self,
+            contour
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+
+        x_vals = np.interp(
+            contour[:, 1],
+            [0, self.__x_grid.shape[0] - 1],
+            [self.__x_bounds[0], self.__x_bounds[1]]
         )
+        y_vals = np.interp(
+            contour[:, 0],
+            [0, self.__y_grid.shape[0] - 1],
+            [self.__y_bounds[0], self.__y_bounds[1]]
+        )
+        return x_vals, y_vals
+
+    def find_cross_product_zeros(self) -> List[List[TurningPoint]]:
 
         retVal = []
 
@@ -190,33 +311,48 @@ class Grid:
             for contour in contours:
                 if len(contour) < self.__x_grid.shape[0] / 10:
                     continue
-
-                interp = RegularGridInterpolator(
-                    (self.__x_grid[0, :], self.__y_grid[:, 1]),
-                    self.magnetic_amp_grids[j],
-                    bounds_error=False, 
-                    fill_value=np.nan
-                )
-
-                x_vals = np.interp(
-                    contour[:, 1],
-                    [0, self.__x_grid.shape[0] - 1],
-                    [self.__x_bounds[0], self.__x_bounds[1]]
-                )
-                y_vals = np.interp(
-                    contour[:, 0],
-                    [0, self.__y_grid.shape[0] - 1],
-                    [self.__y_bounds[0], self.__y_bounds[1]]
-                )
+                
+                x_vals, y_vals = self.__interp_contour(contour)
                 temp.append([TurningPoint(
                     type=TurningPointType.MAXIMUM,
                     x=x_vals[i],
                     y=y_vals[i],
-                    B=interp((y_vals[i], x_vals[i])),
-                    U=interp_pot_grid((y_vals[i], x_vals[i]))
+                    B=self.__magnetic_amp_grids[j](x_vals[i], y_vals[i]),
+                    U=self.__potential_grid(x_vals[i], y_vals[i])
                 ) for i in range(contour.shape[0])])
 
             retVal.append(temp)
+
+        return retVal
+
+    def find_lcds_contours(
+            self,
+            charge: int,
+            iterations: int = 10
+    ) -> List[tuple(float, npt.NDArray[np.float64])]:
+        retVal = []
+
+        for grid in self.__hamiltonian_grids:
+            closed, open = self.__find_initial_levels(grid, charge)
+            for i in range(iterations):
+                closed, open = self.__contour_level_search_step(grid, closed, open)
+            
+            contour = self.__find_closed_contour(grid, closed)
+            x_vals = np.interp(
+                contour[:, 1],
+                [0, self.__x_grid.shape[0] - 1],
+                [self.__x_bounds[0], self.__x_bounds[1]]
+            )
+            y_vals = np.interp(
+                contour[:, 0],
+                [0, self.__y_grid.shape[0] - 1],
+                [self.__y_bounds[0], self.__y_bounds[1]]
+            )
+            retVal.append((
+                closed, 
+                x_vals, 
+                y_vals
+            ))
 
         return retVal
 
@@ -256,14 +392,27 @@ class Grid:
                 for row_idx in rows
             }
             
+            mag_amp_grids = [
+                np.full_like(self.__x_grid, np.nan, dtype=np.float64) for _ in self.__k_values
+            ]
             for future in futures:
                 row_idx = futures[future]
                 try:
                     row_data = future.result()
                     for k_idx in range(len(self.__k_values)):
-                        self.__magnetic_amp_grids[k_idx][row_idx, :] = row_data[k_idx]
+                        mag_amp_grids[k_idx][row_idx, :] = row_data[k_idx]
                 except Exception as e:
                     print(f"Error processing row {row_idx}: {e}")
+
+        self.__magnetic_amp_grids = []
+        for grid in mag_amp_grids:
+            self.__magnetic_amp_grids.append(
+                GridWithInterp(
+                    grid,
+                    self.__x_grid[0, :],
+                    self.__y_grid[:, 1]
+                )
+            )
 
     def save(self, filepath: str) -> None:
         """
@@ -280,7 +429,7 @@ class Grid:
         save_dict = {
             'x_grid': self.__x_grid,
             'y_grid': self.__y_grid,
-            'potential_grid': self.__potential_grid,
+            'potential_grid': self.__potential_grid.discrete,
             'valid_mask': self.__valid_mask,
             'k_values': np.array(self.__k_values),
             'x_bounds': np.array(self.__x_bounds),
@@ -288,12 +437,12 @@ class Grid:
         }
         
         for k_idx, grid in enumerate(self.__magnetic_amp_grids):
-            save_dict[f'magnetic_amp_grid_{k_idx}'] = grid
+            save_dict[f'magnetic_amp_grid_{k_idx}'] = grid.discrete
         
         np.savez_compressed(filepath, **save_dict)
 
     @classmethod
-    def load(cls, filepath: str) -> 'Grid':
+    def load(cls, filepath: str) -> 'FullGrid':
         """
         Load grid data from a .npz file. Note: This restores the data grids
         but the potential_func and magnetic_amp_func must be provided separately.
@@ -322,11 +471,20 @@ class Grid:
             resolution=data['x_grid'].shape[0]
         )
         
-        grid.__potential_grid = data['potential_grid']
+        grid.__potential_grid = GridWithInterp(
+            data['potential_grid'],
+            grid.__x_grid[0, :],
+            grid.__y_grid[:, 1]
+        )
         
         k_idx = 0
+        grid.__magnetic_amp_grids = []
         while f'magnetic_amp_grid_{k_idx}' in data:
-            grid.__magnetic_amp_grids[k_idx] = data[f'magnetic_amp_grid_{k_idx}']
+            grid.__magnetic_amp_grids.append(GridWithInterp(
+                data[f'magnetic_amp_grid_{k_idx}'],
+                grid.__x_grid[0, :],
+                grid.__y_grid[:, 1]
+            ))
             k_idx += 1
         
         return grid
