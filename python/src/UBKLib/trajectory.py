@@ -16,6 +16,28 @@ __MINIZER_OPTIONS = {
 }
 
 
+def classical_hamiltonian(
+        B_m: Vectorizable,
+        U: Vectorizable,
+        mu: float,
+        charge: int
+) -> Vectorizable:
+
+    return charge * U + mu * B_m
+
+
+def relatavistic_hamiltonian(
+        B_m: Vectorizable,
+        U: Vectorizable,
+        mu: float,
+        charge: int,
+        rest_mass: float
+) -> Vectorizable:
+    gamma = np.sqrt(1 + 2 * mu * B_m / rest_mass)
+
+    return charge * U + rest_mass * gamma
+
+
 def classical_ub_trajectory(
         B_m: Vectorizable,
         mu: float,
@@ -61,7 +83,7 @@ def relativistic_ub_trajectory(
         the values U(B_m) for the given parameters
     """
 
-    return intercept - rest_mass * np.sqrt(1 + 2 * mu * B_m / rest_mass) / charge + rest_mass / charge
+    return intercept - rest_mass * np.sqrt(1 + 2 * mu * B_m / rest_mass) / charge
 
 
 def __continuous_lcds_ub_min_intercept(
