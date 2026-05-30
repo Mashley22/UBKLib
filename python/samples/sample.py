@@ -1,9 +1,12 @@
-import UBKLibpp
-import UBKLib
 import matplotlib.pyplot as plt
 import argparse
 import multiprocessing as mp
 import numpy as np
+from matplotlib.patches import Wedge
+
+import UBKLibpp
+import UBKLib
+import UBKLib.types
 
 K_VALUES = [1, 10, 100, 1000]
 RESOLUTION = 1000
@@ -18,13 +21,29 @@ K_IDX = 0
 
 grid = None
 
+LOWER_CONTOUR_COLOUR = "blue"
+UPPER_CONTOUR_COLOUR = "red"
+
+COLOURS = [
+    "#4daf4a",  # green
+    "#984ea3",  # purple
+    "#ff7f00",  # orange
+    "#ffd700",  # gold / yellow
+    "#a65628",  # brown
+    "#999999",  # gray
+    "#6b8e23",  # olive drab
+    "#daa520",  # goldenrod
+    "#8b4513",  # saddle brown
+    "#9acd32",  # yellow green
+]
+
 
 def HAMILTONIAN(b, u):
     return UBKLib.relatavistic_hamiltonian(b, u, MU, CHARGE, ELECTRON_REST_MASS)
 
 
 def POTENTIAL(x, y):
-    return UBKLib.volland_stern_potential(x, y, kp=0)
+    return UBKLib.volland_stern_potential(x, y)
 
 
 def UB_TRAJECTORY(b, total_energy):
@@ -61,16 +80,31 @@ def load_data(filepath):
 def plot():
     grid.calc_cross_products_grids()
     grid.calc_hamiltonian_grids(HAMILTONIAN)
-    lcds = grid.find_lcds_contours(1, 50)
+    lcds = grid.find_lcds_contours(50)
     w0_contours = grid.find_cross_product_zeros()[K_IDX]
-    plt.plot(
-        grid.magnetic_amp_grids[K_IDX].discrete.flatten(),
-        grid.potential_grid.discrete.flatten(),
-        '^', alpha=0.01, color='grey'
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    mask = grid.x_grid.flatten() > 0
+    ax2.plot(
+        grid.magnetic_amp_grids[K_IDX].discrete.flatten()[mask],
+        grid.potential_grid.discrete.flatten()[mask],
+        'x', alpha=0.01, color='grey'
     )
-    for contour in w0_contours:
-        plt.plot([x.B for x in contour], [x.U for x in contour])
-    
+    ax2.set_xlabel('B (nT)')
+    ax2.set_ylabel('U (kV)')
+    idx = 0
+    for i in range(len(w0_contours)):
+        contour = w0_contours[i]
+        tpe = UBKLib.w0_contour_type(contour)
+        if tpe == UBKLib.types.W0ContourType.NONE:
+            color = COLOURS[idx]
+            idx += 1
+        if tpe == UBKLib.types.W0ContourType.LOWER:
+            color = LOWER_CONTOUR_COLOUR
+        if tpe == UBKLib.types.W0ContourType.UPPER:
+            color = UPPER_CONTOUR_COLOUR
+        ax2.plot([x.B for x in contour], [x.U for x in contour], color=color)
+
     b_space = np.array([
         grid.magnetic_amp_grids[K_IDX](lcds[K_IDX][1][i], lcds[K_IDX][2][i])
         for i in range(len(lcds[K_IDX][1]))
@@ -81,34 +115,58 @@ def plot():
     ])
     max_idx = np.argmax(u_space)
     min_idx = np.argmin(u_space)
-    plt.plot(
+    ax2.plot(
         [b_space[min_idx], b_space[max_idx]],
         [u_space[min_idx], u_space[max_idx]],
         'x', color='purple'
     )
 
     b_space = np.linspace(b_space[min_idx], b_space[max_idx], 1000)
-
-    plt.plot(
+    ax2.plot(
         b_space,
         UB_TRAJECTORY(b_space, lcds[K_IDX][0]),
         color='purple', linestyle='--'
     )
-    plt.show()
+    
+    idx = 0
+    for i in range(len(w0_contours)):
+        contour = w0_contours[i]
+        tpe = UBKLib.w0_contour_type(contour)
+        if tpe == UBKLib.types.W0ContourType.NONE:
+            color = COLOURS[idx]
+            idx += 1
+        if tpe == UBKLib.types.W0ContourType.LOWER:
+            color = LOWER_CONTOUR_COLOUR
+        if tpe == UBKLib.types.W0ContourType.UPPER:
+            color = UPPER_CONTOUR_COLOUR
+        contour = w0_contours[i]
+        ax1.plot([x.x for x in contour], [x.y for x in contour], color=color)
+    ax1.plot(
+        [lcds[K_IDX][1][min_idx], lcds[K_IDX][1][max_idx]],
+        [lcds[K_IDX][2][min_idx], lcds[K_IDX][2][max_idx]],
+        'x', color='purple'
+    )
 
-    for contour in w0_contours:
-        plt.plot([x.x for x in contour], [x.y for x in contour])
-
-    plt.plot(
+    ax1.plot(
         lcds[K_IDX][1], lcds[K_IDX][2],
         color='purple', linestyle='--'
     )
     mask = ~np.isnan(grid.magnetic_amp_grids[K_IDX].discrete)
-    plt.plot(
+    ax1.plot(
         grid.x_grid[mask],
         grid.y_grid[mask],
-        '^', alpha=0.01, color='grey'
+        'x', alpha=0.01, color='grey'
     )
+    dayside = Wedge((0, 0), 1, 270, 90, facecolor='white', edgecolor='black', linewidth=2)
+    ax1.add_patch(dayside)
+
+    nightside = Wedge((0, 0), 1, 90, 270, facecolor='black', edgecolor='black', linewidth=2)
+    ax1.add_patch(nightside)
+
+    ax1.set_aspect('equal')
+    ax1.set_xlabel(r'x ($R_E$)')
+    ax1.set_ylabel(r'y ($R_E$)')
+    ax1.margins(0)
     plt.show()
 
 
@@ -129,4 +187,3 @@ if __name__ == "__main__":
     elif args.mode == "plot":
         load_data(args.filepath)
         plot()
-
