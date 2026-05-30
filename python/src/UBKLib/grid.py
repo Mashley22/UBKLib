@@ -63,6 +63,16 @@ def _process_row(
     return row_data
 
 
+def _get_outer_contour_by_distance(contour1, contour2):
+    """
+    Returns the outer contour based on average distance from centroid.
+    """
+    avg_dist1 = np.mean(np.linalg.norm(contour1, axis=1))
+    avg_dist2 = np.mean(np.linalg.norm(contour2, axis=1))
+    
+    return avg_dist1 > avg_dist2
+
+
 class GridWithInterp:
     __discrete_grid: npt.NDArray[np.float64]
     __interp_grid: RegularGridInterpolator
@@ -173,6 +183,28 @@ class FullGrid:
             self.__x_grid[0, :],
             self.__y_grid[:, 1]
         )
+
+    def calc_magnetic_amp_grids(self) -> None:
+        mag_amp_grids = [
+            np.full_like(self.__x_grid, np.nan, dtype=np.float64) for _ in self.__k_values
+        ]
+        for i in range(self.__valid_mask.shape[0]):
+            for j in range(self.__valid_mask.shape[1]):
+                if self.__valid_mask[i][j]:
+                    val = self.__magnetic_amp_func(self.__x_grid[i][j], self.__y_grid[i][j])
+                    for k in range(len(self.__k_values)):
+                        mag_amp_grids[k][i, j] = val[k]
+
+        self.__magnetic_amp_grids = []
+
+        for grid in mag_amp_grids:
+            self.__magnetic_amp_grids.append(
+                GridWithInterp(
+                    grid,
+                    self.__x_grid[0, :],
+                    self.__y_grid[:, 1]
+                )
+            )
     
     @property
     def x_grid(self) -> npt.NDArray[np.float64]:
@@ -201,6 +233,10 @@ class FullGrid:
     @property
     def magnetic_amp_grids(self) -> List[GridWithInterp]:
         return self.__magnetic_amp_grids
+    
+    @property 
+    def hamiltonian_grids(self) -> List[npt.NDArray[np.float64]]:
+        return self.__hamiltonian_grids
 
     def calc_cross_products_grids(self) -> None:
         self.__cross_product_grids = []
@@ -255,16 +291,15 @@ class FullGrid:
 
     def __find_initial_levels(
         self,
-        grid: npt.NDArray[np.float64],
-        charge: float,
+        grid: npt.NDArray[np.float64]
     ) -> Tuple[float, float]:
 
         valid_data = grid[~np.isnan(grid)]
         lo, hi = np.min(valid_data), np.max(valid_data)
 
-        delta = -(hi - lo) / 100 * charge
+        delta = (hi - lo) / 100
 
-        mid = (lo + hi) / 2
+        mid = lo
 
         for i in range(100):
             
@@ -273,15 +308,12 @@ class FullGrid:
             if mid_closed is True:
                 break
 
-            mid_closed = mid_closed + delta
+            mid = mid + delta
 
         if mid_closed is False:
             raise ValueError("Implementation error, could not find suitable starting value for H contours")
         
-        if charge > 0:
-            return (mid, lo)
-        else:
-            return (mid, hi)
+        return (mid, lo, hi)
 
     def __interp_contour(
             self,
@@ -325,36 +357,61 @@ class FullGrid:
 
         return retVal
 
+    def __find_lcds_contours(
+            self,
+            grid: npt.NDArray[np.float64],
+            iterations: int,
+            closed_level: float,
+            open_level: float  
+    ) -> Tuple[float, float, npt.NDArray[np.float64]]:
+        closed = closed_level
+        open = open_level
+        for i in range(iterations):
+            closed, open = self.__contour_level_search_step(grid, closed, open)
+    
+        return closed, open, self.__find_closed_contour(grid, closed)
+
     def find_lcds_contours(
             self,
-            charge: int,
-            iterations: int = 10
-    ) -> List[tuple(float, npt.NDArray[np.float64])]:
+            iterations: int = 50,
+            check_iterations: int = 10
+    ) -> List[Tuple(float, npt.NDArray, npt.NDArray)]:
+
+        assert check_iterations < iterations
+
         retVal = []
 
         for grid in self.__hamiltonian_grids:
-            closed, open = self.__find_initial_levels(grid, charge)
-            for i in range(iterations):
-                closed, open = self.__contour_level_search_step(grid, closed, open)
+            mid, lo, hi = self.__find_initial_levels(grid)
+            midlo = mid
+            midhi = mid
+            lo_closed, lo_open, lo_contour = self.__find_lcds_contours(grid, check_iterations, midlo, lo)
+            hi_closed, hi_open, hi_contour = self.__find_lcds_contours(grid, check_iterations, midhi, hi)
+            if _get_outer_contour_by_distance(lo_contour, hi_contour):
+                closed, open, contour = self.__find_lcds_contours(grid, iterations - check_iterations, lo_closed, lo_open)
+            else:
+                closed, open, contour = self.__find_lcds_contours(grid, iterations - check_iterations, hi_closed, hi_open)
             
-            contour = self.__find_closed_contour(grid, closed)
-            x_vals = np.interp(
-                contour[:, 1],
-                [0, self.__x_grid.shape[0] - 1],
-                [self.__x_bounds[0], self.__x_bounds[1]]
-            )
-            y_vals = np.interp(
-                contour[:, 0],
-                [0, self.__y_grid.shape[0] - 1],
-                [self.__y_bounds[0], self.__y_bounds[1]]
-            )
-            retVal.append((
-                closed, 
-                x_vals, 
-                y_vals
-            ))
+            x_vals, y_vals = self.__interp_contour(contour)
+            retVal.append((closed, x_vals, y_vals))
 
         return retVal
+
+    def find_drift_shell(
+            self,
+            hamiltonian: float,
+            k_idx: int
+    ) -> List[tuple(npt.NDArray, npt.NDArray)]:
+        contours = measure.find_contours(self.__hamiltonian_grids[k_idx], level=hamiltonian)
+
+        x_vals = []
+        y_vals = []
+        for contour in contours:
+            x, y = self.__interp_contour(contour)
+            x_vals.append(x)
+            y_vals.append(y)
+
+        return x_vals, y_vals
 
     def calc_magnetic_amp_grid_parallel(
             self, 
