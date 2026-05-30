@@ -8,6 +8,8 @@
 
 import UBKLib;
 
+#define EARTH_TERMINATE_LIM 2.0
+
 using T = double;
 
 namespace py = pybind11;
@@ -16,11 +18,11 @@ namespace {
 
 constexpr ubk::FieldLineParams<T> params = {
   .innerLim = 1.05,
-  .outterLim = 15.0,
+  .outterLim = 25.0,
   .maxStepDotField = 1,
   .failRatio = 2,
   .maxStepSize = 0.01,
-  .maxStepCount = 1000,
+  .maxStepCount = 10000,
 };
 
 constexpr ubk::Time simTime {
@@ -59,6 +61,7 @@ calculateB(T x, T y, py::list k_vals) {
   field.igrf13.setTime(simTime);
   field.ts89.dipole_tilt() = field.igrf13.dipole_tilt();
   field.ts89.setTime(simTime);
+  field.ts89.iop() = 0;
 
   generator.assignModel(field);
 
@@ -83,6 +86,11 @@ calculateB(T x, T y, py::list k_vals) {
     fieldLine = generator.generateFieldLine(geo.value());
   } catch(...) {
     return invalid_field_line();
+  }
+
+  if (fieldLine.points().back().loc.amp() > EARTH_TERMINATE_LIM ||
+      fieldLine.points().front().loc.amp() > EARTH_TERMINATE_LIM) {
+    return invalid_field_line();  
   }
  
   try {
