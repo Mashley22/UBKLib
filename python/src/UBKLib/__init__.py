@@ -27,5 +27,6 @@ from .w0_contours import (
     parse_upper_contour_w0_points,
     generate_ub_spline,
     generate_realSpace_splines,
-    w0_points_from_cloud
+    w0_points_from_cloud,
+    w0_contour_type
 )

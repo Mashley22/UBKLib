@@ -9,6 +9,7 @@ from scipy.interpolate import (
 import pandas as pd
 
 from .types import (
+    W0ContourType,
     TurningPoint,
     TurningPointType,
     MagneticAmplitudeFunction,
@@ -357,3 +358,29 @@ def w0_points_from_cloud(
             ))
 
     return upper_extrema, lower_extrema
+
+
+def w0_contour_type(
+        contour: List[TurningPoint],
+        inner_valid_lim: float = 2.0
+) -> W0ContourType:
+    """
+    Inner valid lim corresponds to the limit of the valid points that is closest to the Earth.
+    I.e. keep this small for low values of K, (default), but will need to be larger for larger values of K
+    """
+    end_points = contour[-1], contour[0]
+    if end_points[0].x == end_points[1].x and end_points[0].y == end_points[1].y:
+        return W0ContourType.NONE
+    
+    radii = np.hypot(end_points[0].x, end_points[0].y), np.hypot(end_points[1].x, end_points[1].y)
+
+    if radii[0] < inner_valid_lim:
+        if end_points[1].y > 0:
+            return W0ContourType.LOWER
+        return W0ContourType.UPPER
+    if radii[1] < inner_valid_lim:
+        if end_points[0].y > 0:
+            return W0ContourType.LOWER
+        return W0ContourType.UPPER
+    return W0ContourType.NONE
+    

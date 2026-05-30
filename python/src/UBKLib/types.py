@@ -89,6 +89,16 @@ class UBTrajectory:
     upper_intercept: Optional[UBCoord] = None
 
 
+class W0ContourType(Enum):
+    """
+    Defines the type of the W = 0 contour found, whether its the lower contour, the upper contour, 
+    or some random one.
+    """
+    UPPER = 0
+    LOWER = 1
+    NONE = 2
+
+
 class TurningPointType(Enum):
     MAXIMUM = 0
     MINIMUM = 1
